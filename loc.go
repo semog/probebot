@@ -19,7 +19,7 @@ var (
 	locFinishedCreatingPoll = "Finished creating a new poll\n\nPreview:\n"
 	locMainMenu             = "I can help you create, send and manage polls.\n\nWhat do you want to do?"
 	locAboutCommand         = "/about"
-	locAboutMessage         = "You can find me on github:\nhttps://github.com/jheuel/pollrBot"
+	locAboutMessage         = "You can find me on github:\nhttps://github.com/semog/probebot"
 	locPollDoneButton       = "done"
 	locToggleInactive       = "open poll"
 	locToggleOpen           = "close poll"
@@ -29,3 +29,18 @@ var (
 		"You can add more options by sending messages each containing one option. If you are done, please push the %s button.\n\nPreview:\n",
 		locPollDoneButton)
 )
+
+/*
+Following is the command menu for constructing the bot with @BotFather.
+Use the /setcommands command and reply with the following list of commands.
+---------------------
+start - Start the bot.
+edit - Edit poll questions.
+about - About this bot.
+*/
+
+/*
+Description text:
+-------------------------
+This bot creates inline polls in Telegram chats without spamming multiple messages.
+*/

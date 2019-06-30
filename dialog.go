@@ -5,16 +5,16 @@ import (
 	"log"
 	"strings"
 
-	"github.com/go-telegram-bot-api/telegram-bot-api"
+	tg "github.com/semog/telegram-bot-api"
 )
 
-func handleDialog(bot *tgbotapi.BotAPI, update tgbotapi.Update, st Store) error {
+func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 	state := ohHi
 	pollid := -1
 	var err error
 
 	if strings.Contains(update.Message.Text, locAboutCommand) {
-		msg := tgbotapi.NewMessage(int64(update.Message.From.ID), locAboutMessage)
+		msg := tg.NewMessage(int64(update.Message.From.ID), locAboutMessage)
 		_, err = bot.Send(&msg)
 		if err != nil {
 			return fmt.Errorf("could not send message: %v", err)
@@ -33,7 +33,7 @@ func handleDialog(bot *tgbotapi.BotAPI, update tgbotapi.Update, st Store) error 
 		polls, err := st.GetPollsByUser(update.Message.From.ID)
 		if err != nil || len(polls) == 0 {
 			log.Printf("could not get polls of user with userid %d: %v", update.Message.From.ID, err)
-			msg := tgbotapi.NewMessage(int64(update.Message.From.ID), locNoMessageToEdit)
+			msg := tg.NewMessage(int64(update.Message.From.ID), locNoMessageToEdit)
 			_, err = bot.Send(&msg)
 			if err != nil {
 				return fmt.Errorf("could not send message: %v", err)
@@ -82,7 +82,7 @@ func handleDialog(bot *tgbotapi.BotAPI, update tgbotapi.Update, st Store) error 
 			return fmt.Errorf("could not save poll: %v", err)
 		}
 
-		msg := tgbotapi.NewMessage(int64(update.Message.From.ID), locGotQuestion)
+		msg := tg.NewMessage(int64(update.Message.From.ID), locGotQuestion)
 		_, err = bot.Send(&msg)
 		if err != nil {
 			return fmt.Errorf("could not send message: %v", err)
@@ -110,7 +110,7 @@ func handleDialog(bot *tgbotapi.BotAPI, update tgbotapi.Update, st Store) error 
 			return fmt.Errorf("could not save poll: %v", err)
 		}
 
-		msg := tgbotapi.NewMessage(
+		msg := tg.NewMessage(
 			int64(update.Message.From.ID),
 			fmt.Sprintf(locGotEditQuestion, p.Question))
 		_, err = bot.Send(&msg)
@@ -139,10 +139,10 @@ func handleDialog(bot *tgbotapi.BotAPI, update tgbotapi.Update, st Store) error 
 		}
 		body += "</pre>\n\n"
 
-		msg := tgbotapi.NewMessage(
+		msg := tg.NewMessage(
 			update.Message.Chat.ID,
 			body)
-		msg.ParseMode = tgbotapi.ModeHTML
+		msg.ParseMode = tg.ModeHTML
 		msg.ReplyMarkup = buildEditMarkup(p, false, false)
 
 		_, err = bot.Send(msg)

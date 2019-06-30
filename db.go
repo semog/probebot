@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/go-telegram-bot-api/telegram-bot-api"
+	tg "github.com/semog/telegram-bot-api"
 )
 
 type sqlStore struct {
@@ -96,8 +96,8 @@ func newSQLStore(databaseFile string) *sqlStore {
 	return st
 }
 
-func (st *sqlStore) GetUser(userid int) (*tgbotapi.User, error) {
-	u := &tgbotapi.User{ID: userid}
+func (st *sqlStore) GetUser(userid int) (*tg.User, error) {
+	u := &tg.User{ID: userid}
 
 	row := st.db.QueryRow("SELECT FirstName, LastName, UserName FROM user WHERE ID = ?", userid)
 	if err := row.Scan(&u.FirstName, &u.LastName, &u.UserName); err != nil {
@@ -571,7 +571,7 @@ func (st *sqlStore) SaveOptions(options []option) error {
 	return nil
 }
 
-func (st *sqlStore) SaveUser(u *tgbotapi.User) error {
+func (st *sqlStore) SaveUser(u *tg.User) error {
 	tx, err := st.db.Begin()
 	if err != nil {
 		return fmt.Errorf("could not begin database transaction: %v", err)

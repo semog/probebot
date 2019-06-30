@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-telegram-bot-api/telegram-bot-api"
+	tg "github.com/semog/telegram-bot-api"
 )
 
-func handleInlineQuery(bot *tgbotapi.BotAPI, update tgbotapi.Update, st Store) error {
+func handleInlineQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 	polls, err := st.GetPollsByUser(update.InlineQuery.From.ID)
 	if err != nil {
 		return fmt.Errorf("could not get polls for user: %v", err)
@@ -21,7 +21,7 @@ func handleInlineQuery(bot *tgbotapi.BotAPI, update tgbotapi.Update, st Store) e
 	results := make([]interface{}, len(polls))
 	for i, p := range polls {
 		log.Println(p)
-		article := tgbotapi.NewInlineQueryResultArticleHTML(strconv.Itoa(p.ID), p.Question, buildPollListing(p, st))
+		article := tg.NewInlineQueryResultArticleHTML(strconv.Itoa(p.ID), p.Question, buildPollListing(p, st))
 		if len(p.Options) > 0 {
 			article.ReplyMarkup = buildPollMarkup(p)
 		}
@@ -30,7 +30,7 @@ func handleInlineQuery(bot *tgbotapi.BotAPI, update tgbotapi.Update, st Store) e
 		results[i] = article
 
 	}
-	inlineConfig := tgbotapi.InlineConfig{
+	inlineConfig := tg.InlineConfig{
 		InlineQueryID:     update.InlineQuery.ID,
 		Results:           results,
 		IsPersonal:        true,
@@ -47,7 +47,7 @@ func handleInlineQuery(bot *tgbotapi.BotAPI, update tgbotapi.Update, st Store) e
 	return nil
 }
 
-func handleInlineQueryAdmin(bot *tgbotapi.BotAPI, update tgbotapi.Update, st Store) error {
+func handleInlineQueryAdmin(bot *tg.BotAPI, update tg.Update, st Store) error {
 	splits := strings.Split(update.InlineQuery.Query, ":")
 	if len(splits) < 1 {
 		return fmt.Errorf("Could not convert query to pollid")
@@ -75,7 +75,7 @@ func handleInlineQueryAdmin(bot *tgbotapi.BotAPI, update tgbotapi.Update, st Sto
 	results := make([]interface{}, len(polls))
 	for i, p := range polls {
 		log.Println(p)
-		article := tgbotapi.NewInlineQueryResultArticleHTML(strconv.Itoa(p.ID), p.Question, buildPollListing(p, st))
+		article := tg.NewInlineQueryResultArticleHTML(strconv.Itoa(p.ID), p.Question, buildPollListing(p, st))
 		if len(p.Options) > 0 && active {
 			article.ReplyMarkup = buildPollMarkup(p)
 		}
@@ -84,7 +84,7 @@ func handleInlineQueryAdmin(bot *tgbotapi.BotAPI, update tgbotapi.Update, st Sto
 		results[i] = article
 
 	}
-	inlineConfig := tgbotapi.InlineConfig{
+	inlineConfig := tg.InlineConfig{
 		InlineQueryID:     update.InlineQuery.ID,
 		Results:           results,
 		IsPersonal:        true,

@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-telegram-bot-api/telegram-bot-api"
+	tg "github.com/semog/telegram-bot-api"
 )
 
-func handleCallbackQuery(bot *tgbotapi.BotAPI, update tgbotapi.Update, st Store) error {
+func handleCallbackQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 	if update.CallbackQuery.Data == "dummy" {
-		callbackConfig := tgbotapi.NewCallback(
+		callbackConfig := tg.NewCallback(
 			update.CallbackQuery.ID,
 			"")
 		_, err := bot.AnswerCallbackQuery(callbackConfig)
@@ -51,7 +51,7 @@ func handleCallbackQuery(bot *tgbotapi.BotAPI, update tgbotapi.Update, st Store)
 		return fmt.Errorf("could not get poll: %v", err)
 	}
 	if isInactive(p) {
-		callbackConfig := tgbotapi.NewCallback(
+		callbackConfig := tg.NewCallback(
 			update.CallbackQuery.ID,
 			"This poll is inactive.")
 		_, err = bot.AnswerCallbackQuery(callbackConfig)
@@ -90,7 +90,7 @@ func handleCallbackQuery(bot *tgbotapi.BotAPI, update tgbotapi.Update, st Store)
 		popupText = fmt.Sprintf("Seems like you deleted your vote.")
 	}
 
-	callbackConfig := tgbotapi.NewCallback(
+	callbackConfig := tg.NewCallback(
 		update.CallbackQuery.ID,
 		popupText)
 	_, err = bot.AnswerCallbackQuery(callbackConfig)
@@ -101,7 +101,7 @@ func handleCallbackQuery(bot *tgbotapi.BotAPI, update tgbotapi.Update, st Store)
 	return nil
 }
 
-func updatePollMessages(bot *tgbotapi.BotAPI, pollid int, st Store) error {
+func updatePollMessages(bot *tg.BotAPI, pollid int, st Store) error {
 	p, err := st.GetPoll(pollid)
 	if err != nil {
 		return fmt.Errorf("could not get poll: %v", err)
@@ -114,9 +114,9 @@ func updatePollMessages(bot *tgbotapi.BotAPI, pollid int, st Store) error {
 
 	listing := buildPollListing(p, st)
 
-	var ed tgbotapi.EditMessageTextConfig
+	var ed tg.EditMessageTextConfig
 	ed.Text = listing
-	ed.ParseMode = tgbotapi.ModeHTML
+	ed.ParseMode = tg.ModeHTML
 
 	if !isInactive(p) {
 		ed.ReplyMarkup = buildPollMarkup(p)
@@ -197,7 +197,7 @@ func updatePollMessages(bot *tgbotapi.BotAPI, pollid int, st Store) error {
 	return nil
 }
 
-func handlePollDoneQuery(bot *tgbotapi.BotAPI, update tgbotapi.Update, st Store) error {
+func handlePollDoneQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 	splits := strings.Split(update.CallbackQuery.Data, ":")
 	if len(splits) < 2 {
 		return fmt.Errorf("query did not contain the pollid")
@@ -222,7 +222,7 @@ func handlePollDoneQuery(bot *tgbotapi.BotAPI, update tgbotapi.Update, st Store)
 	return nil
 }
 
-func handlePollEditQuery(bot *tgbotapi.BotAPI, update tgbotapi.Update, st Store) error {
+func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 	splits := strings.Split(update.CallbackQuery.Data, ":")
 	if len(splits) < 3 {
 		log.Println(splits)
@@ -270,7 +270,7 @@ func handlePollEditQuery(bot *tgbotapi.BotAPI, update tgbotapi.Update, st Store)
 			return fmt.Errorf("could not save state: %v", err)
 		}
 
-		msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, locAddOption)
+		msg := tg.NewMessage(update.CallbackQuery.Message.Chat.ID, locAddOption)
 		_, err = bot.Send(&msg)
 		if err != nil {
 			return fmt.Errorf("could not send message: %v", err)
@@ -283,7 +283,7 @@ func handlePollEditQuery(bot *tgbotapi.BotAPI, update tgbotapi.Update, st Store)
 			return fmt.Errorf("could not save state: %v", err)
 		}
 
-		msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, locEditQuestion)
+		msg := tg.NewMessage(update.CallbackQuery.Message.Chat.ID, locEditQuestion)
 		_, err = bot.Send(&msg)
 		if err != nil {
 			return fmt.Errorf("could not send message: %v", err)
@@ -327,9 +327,9 @@ func handlePollEditQuery(bot *tgbotapi.BotAPI, update tgbotapi.Update, st Store)
 	}
 	body += "</pre>\n\n"
 
-	var ed tgbotapi.EditMessageTextConfig
+	var ed tg.EditMessageTextConfig
 	ed.Text = body
-	ed.ParseMode = tgbotapi.ModeHTML
+	ed.ParseMode = tg.ModeHTML
 	ed.ReplyMarkup = buildEditMarkup(p, noOlder, noNewer)
 
 	ed.ChatID = update.CallbackQuery.Message.Chat.ID
@@ -343,7 +343,7 @@ func handlePollEditQuery(bot *tgbotapi.BotAPI, update tgbotapi.Update, st Store)
 	return nil
 }
 
-func parseQueryPayload(update tgbotapi.Update) (pollid int, optionid int, err error) {
+func parseQueryPayload(update tg.Update) (pollid int, optionid int, err error) {
 	dataSplit := strings.Split(update.CallbackQuery.Data, ":")
 	if len(dataSplit) != 2 {
 		return pollid, optionid, fmt.Errorf("could not parse response")

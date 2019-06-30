@@ -1,20 +1,38 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
 	"strconv"
 	"time"
 
-	"github.com/go-telegram-bot-api/telegram-bot-api"
-	//"github.com/go-telegram-bot-api/telegram-bot-api"
+	tg "github.com/semog/telegram-bot-api"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/semog/go-sqldb"
 )
 
+const probedbFilename = "probes.db"
+
 func main() {
-	if err := run(); err != nil {
+	token := flag.String("token", "Ask @BotFather", "telegram bot token")
+	debug := flag.Bool("debug", false, "Show debug information")
+	flag.Parse()
+
+	if *token == "Ask @BotFather" {
+		log.Fatal("token flag required. Go ask @BotFather.")
+	}
+
+	log.Print("Connecting...")
+	bot, err := tg.NewBotAPI(*token)
+	if err != nil {
+		log.Fatal("Could not connect to bot.")
+	}
+
+	bot.Debug = *debug
+
+	if err := run(bot); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(2)
 	}
@@ -56,7 +74,7 @@ func newTimer() func() {
 	}
 }
 
-func run() error {
+func run(bot *tg.BotAPI) error {
 	// fill update channel with constant rate
 	go func() {
 		var pollid int
@@ -67,29 +85,12 @@ func run() error {
 		}
 	}()
 
-	databaseFileName := os.Getenv("DB")
-	if databaseFileName == "" {
-		return fmt.Errorf("Did not find database file name $DB")
-	}
-
-	APIToken := os.Getenv("APITOKEN")
-	if APIToken == "" {
-		return fmt.Errorf("Did not find telegram API token $APITOKEN")
-	}
-
-	var st Store = newSQLStore(databaseFileName)
+	var st Store = newSQLStore(probedbFilename)
 	defer st.Close()
-
-	bot, err := tgbotapi.NewBotAPI(APIToken)
-	if err != nil {
-		return fmt.Errorf("could not start bot: %v", err)
-	}
-
-	//bot.Debug = true
 
 	log.Printf("Authorized on account %s", bot.Self.UserName)
 
-	u := tgbotapi.NewUpdate(0)
+	u := tg.NewUpdate(0)
 	u.Timeout = 60
 
 	updates, err := bot.GetUpdatesChan(u)
