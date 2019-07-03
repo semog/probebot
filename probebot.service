@@ -1,0 +1,10 @@
+[Unit]
+Description = Run the ProbeBot Telegram Bot
+After = network.target
+
+[Service]
+ExecStart = /usr/local/lib/probebot/probebotsrv.sh
+Restart=always
+
+[Install]
+WantedBy = multi-user.target

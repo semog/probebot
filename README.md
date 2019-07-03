@@ -13,7 +13,7 @@ go get github.com/semog/probebot
 if you have a working Go environment.
 
 
-After that you can run the bot with
+After that you can install the bot as a service by running
 ```
-DB=database.db APITOKEN=uiaeouiaouiao probebot
+sudo ./install.sh
 ```
