@@ -384,7 +384,7 @@ func (st *sqlStore) SaveAnswer(p *poll, a answer) (unvoted bool, err error) {
 			return true, nil
 		}
 
-		if !isMultipleChoice(p) {
+		if !p.isMultipleChoice() {
 
 			// decrement previously selected option(s)
 			stmt, err = tx.Prepare("UPDATE option SET Ctr = Ctr - 1 WHERE ID = ? AND Ctr > 0")

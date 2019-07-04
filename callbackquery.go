@@ -50,7 +50,7 @@ func handleCallbackQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 	if err != nil {
 		return fmt.Errorf("could not get poll: %v", err)
 	}
-	if isInactive(p) {
+	if p.isInactive() {
 		callbackConfig := tg.NewCallback(
 			update.CallbackQuery.ID,
 			"This poll is inactive.")
@@ -85,9 +85,11 @@ func handleCallbackQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 
 	pollsToUpdate.enqueue(p.ID)
 
-	popupText := fmt.Sprintf(`You voted for "%s"`, choice.Text)
+	var popupText string
 	if unvoted {
-		popupText = fmt.Sprintf("Seems like you deleted your vote.")
+		popupText = fmt.Sprintf("Selection removed")
+	} else {
+		popupText = fmt.Sprintf(`You selected "%s"`, choice.Text)
 	}
 
 	callbackConfig := tg.NewCallback(
@@ -118,7 +120,7 @@ func updatePollMessages(bot *tg.BotAPI, pollid int, st Store) error {
 	ed.Text = listing
 	ed.ParseMode = tg.ModeHTML
 
-	if !isInactive(p) {
+	if !p.isInactive() {
 		ed.ReplyMarkup = buildPollMarkup(p)
 	}
 

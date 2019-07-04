@@ -6,8 +6,8 @@ import (
 	"log"
 	"strconv"
 
-	tg "github.com/semog/telegram-bot-api"
 	"github.com/kyokomi/emoji"
+	tg "github.com/semog/telegram-bot-api"
 )
 
 func postPoll(bot *tg.BotAPI, p *poll, chatid int64) (tg.Message, error) {
@@ -103,7 +103,7 @@ func buildPollMarkup(p *poll) *tg.InlineKeyboardMarkup {
 
 	votesForOption := make(map[int]int)
 	for _, a := range p.Answers {
-		if !isMultipleChoice(p) {
+		if !p.isMultipleChoice() {
 			if _, ok := polledUsers[a.UserID]; ok {
 				continue
 			}
@@ -146,7 +146,7 @@ func buildPollListing(p *poll, st Store) (listing string) {
 	votesForOption := make(map[int]int)
 	for i, o := range p.Options {
 		for _, a := range p.Answers {
-			if !isMultipleChoice(p) {
+			if !p.isMultipleChoice() {
 				if _, ok := polledUsers[a.UserID]; ok {
 					continue
 				}
@@ -165,25 +165,28 @@ func buildPollListing(p *poll, st Store) (listing string) {
 		}
 	}
 
-	listing += emoji.Sprintf(":bar_chart:<b>%s</b>\n", html.EscapeString(p.Question))
+	listing += emoji.Sprintf("<b>%s</b>\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+		html.EscapeString(p.Question))
 	//log.Printf("Create listing for question: %s\n", p.Question)
 
 	for i, o := range p.Options {
 		var part string
-		if len(p.Answers) > 0 {
+		if p.isDisplayVotePercent() {
 			part = fmt.Sprintf(" (%.0f%%)", 100.*float64(votesForOption[o.ID])/float64(len(polledUsers)))
 			if votesForOption[o.ID] != o.Ctr {
 				log.Printf("Counter for option #%d is off: %d stored vs. %d counted", o.ID, o.Ctr, votesForOption[o.ID])
 			}
+		} else {
+			part = ""
 		}
-		listing += fmt.Sprintf("\n<b>%s</b>%s", html.EscapeString(o.Text), part)
+		listing += emoji.Sprint(fmt.Sprintf("\n:ballot_box: <b>%s</b>%s", html.EscapeString(o.Text), part))
 
 		usersOnAnswer := len(listOfUsers[i])
 		if len(p.Answers) < maxNumberOfUsersListed && usersOnAnswer > 0 {
 			for j := 0; j+1 < usersOnAnswer; j++ {
-				listing += "\n\u251C " + html.EscapeString(getDisplayUserName(listOfUsers[i][j]))
+				listing += "\n\u251C " + getFormattedUserLink(listOfUsers[i][j])
 			}
-			listing += "\n\u2514 " + html.EscapeString(getDisplayUserName(listOfUsers[i][usersOnAnswer-1]))
+			listing += "\n\u2514 " + getFormattedUserLink(listOfUsers[i][usersOnAnswer-1])
 		}
 		listing += "\n"
 	}
@@ -209,13 +212,13 @@ func buildEditMarkup(p *poll, noOlder, noNewer bool) *tg.InlineKeyboardMarkup {
 	}
 	buttonrows[0] = append(buttonrows[0], buttonLast, buttonNext)
 	buttonInactive := tg.NewInlineKeyboardButtonData(locToggleOpen, query+":c")
-	if isInactive(p) {
+	if p.isInactive() {
 		buttonInactive = tg.NewInlineKeyboardButtonData(locToggleInactive, query+":c")
 	}
 	buttonrows[1] = append(buttonrows[1], buttonInactive)
 
 	buttonMultipleChoice := tg.NewInlineKeyboardButtonData(locToggleSingleChoice, query+":m")
-	if isMultipleChoice(p) {
+	if p.isMultipleChoice() {
 		buttonMultipleChoice = tg.NewInlineKeyboardButtonData(locToggleMultipleChoice, query+":m")
 	}
 	buttonrows[1] = append(buttonrows[1], buttonMultipleChoice)
@@ -229,15 +232,16 @@ func buildEditMarkup(p *poll, noOlder, noNewer bool) *tg.InlineKeyboardMarkup {
 	return &markup
 }
 
+func getFormattedUserLink(u *tg.User) string {
+	return fmt.Sprintf("<a href=\"tg://user?id=%v\">%s</a>", u.ID, html.EscapeString(getDisplayUserName(u)))
+}
 func getDisplayUserName(u *tg.User) string {
-	if u.FirstName == "" && u.LastName == "" {
-		return strconv.Itoa(u.ID)
-	} else if u.FirstName != "" {
-		name := u.FirstName
-		if u.LastName != "" {
-			name += " " + u.LastName
-		}
-		return name
+	name := u.FirstName
+	if len(u.LastName) > 0 {
+		name += " " + u.LastName
 	}
-	return u.LastName
+	if len(name) == 0 {
+		name = u.UserName
+	}
+	return name
 }

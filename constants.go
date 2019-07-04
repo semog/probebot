@@ -24,5 +24,10 @@ const (
 	multipleChoice
 )
 
+const (
+	displayVotePercent = iota
+	hideDisplayVotePercent
+)
+
 var maxNumberOfUsersListed = 100
 var maxPollsInlineQuery = 5

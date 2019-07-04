@@ -42,21 +42,27 @@ type option struct {
 }
 
 type poll struct {
-	ID        int
-	MessageID int
-	UserID    int
-	Question  string
-	Inactive  int
-	Private   int
-	Type      int
-	Options   []option
-	Answers   []answer
+	ID             int
+	MessageID      int
+	UserID         int
+	Question       string
+	Inactive       int
+	Private        int
+	Type           int
+	DisplayPercent int
+	Options        []option
+	Answers        []answer
 }
 
-func isInactive(poll *poll) bool {
+func (poll *poll) isInactive() bool {
 	return poll.Inactive == inactive
 }
 
-func isMultipleChoice(poll *poll) bool {
+func (poll *poll) isMultipleChoice() bool {
 	return poll.Type == multipleChoice
+}
+
+func (poll *poll) isDisplayVotePercent() bool {
+	return false
+	//eps return poll.DisplayPercent == displayVotePercent && len(poll.Answers) > 0
 }

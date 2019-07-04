@@ -22,12 +22,14 @@ func main() {
 
 	if *token == "Ask @BotFather" {
 		log.Fatal("token flag required. Go ask @BotFather.")
+		os.Exit(2)
 	}
 
 	log.Print("Connecting...")
 	bot, err := tg.NewBotAPI(*token)
 	if err != nil {
-		log.Fatal("Could not connect to bot.")
+		log.Fatal(fmt.Fprintf(os.Stderr, "Could not connect to bot: %v\n", err))
+		os.Exit(2)
 	}
 
 	bot.Debug = *debug
