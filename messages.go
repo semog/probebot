@@ -15,12 +15,12 @@ func postPoll(bot *tg.BotAPI, p *poll, chatid int64) (tg.Message, error) {
 		Text:              locSharePoll,
 		SwitchInlineQuery: &p.Question,
 	}
-	new := tg.NewInlineKeyboardButtonData(locCreateNewPoll, createPollQuery)
+	new := tg.NewInlineKeyboardButtonData(locCreateNewPoll, qryCreatePoll)
 
 	buttons := tg.NewInlineKeyboardRow(share, new)
 	markup := tg.NewInlineKeyboardMarkup(buttons)
 	messageTxt := locFinishedCreatingPoll
-	messageTxt += p.Question + "\n\n"
+	messageTxt += p.Question + "\n" + lineSep + "\n"
 
 	for i, o := range p.Options {
 		messageTxt += strconv.Itoa(i+1) + ") " + o.Text + "\n"
@@ -33,7 +33,7 @@ func postPoll(bot *tg.BotAPI, p *poll, chatid int64) (tg.Message, error) {
 
 func sendMainMenuMessage(bot *tg.BotAPI, update tg.Update) (tg.Message, error) {
 	buttons := make([]tg.InlineKeyboardButton, 0)
-	buttons = append(buttons, tg.NewInlineKeyboardButtonData("create poll", createPollQuery))
+	buttons = append(buttons, tg.NewInlineKeyboardButtonData("create poll", qryCreatePoll))
 	markup := tg.NewInlineKeyboardMarkup(buttons)
 	messageTxt := locMainMenu
 	msg := tg.NewMessage(int64(update.Message.From.ID), messageTxt)
@@ -48,7 +48,7 @@ func sendInterMessage(bot *tg.BotAPI, update tg.Update, p *poll) (tg.Message, er
 	//SwitchInlineQuery: &p.Question,
 	//}
 	pollDoneButton := tg.NewInlineKeyboardButtonData(
-		locPollDoneButton, fmt.Sprintf("%s:%d", pollDoneQuery, p.ID))
+		locPollDoneButton, fmt.Sprintf("%s:%d", qryPollDone, p.ID))
 
 	buttons := make([]tg.InlineKeyboardButton, 0)
 	buttons = append(buttons, pollDoneButton)
@@ -56,7 +56,7 @@ func sendInterMessage(bot *tg.BotAPI, update tg.Update, p *poll) (tg.Message, er
 
 	markup := tg.NewInlineKeyboardMarkup(buttons)
 	messageTxt := locAddedOption
-	messageTxt += p.Question + "\n\n"
+	messageTxt += p.Question + "\n" + lineSep + "\n"
 
 	for i, o := range p.Options {
 		messageTxt += strconv.Itoa(i+1) + ") " + o.Text + "\n"
@@ -82,8 +82,8 @@ func sendNewQuestionMessage(bot *tg.BotAPI, update tg.Update, st Store) error {
 }
 
 func sendEditMessage(bot *tg.BotAPI, update tg.Update, p *poll) (tg.Message, error) {
-	body := "This is the poll currently selected:\n<pre>\n"
-	body += p.Question + "\n"
+	body := "Currently selected Poll:\n<pre>\n"
+	body += p.Question + "\n" + lineSep + "\n"
 	for i, o := range p.Options {
 		body += fmt.Sprintf("%d. %s", i+1, o.Text) + "\n"
 	}
@@ -165,67 +165,69 @@ func buildPollListing(p *poll, st Store) (listing string) {
 		}
 	}
 
-	listing += emoji.Sprintf("<b>%s</b>\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
-		html.EscapeString(p.Question))
+	listing += emoji.Sprintf("<b>%s</b>\n%s", html.EscapeString(p.Question), lineSep)
 	//log.Printf("Create listing for question: %s\n", p.Question)
 
 	for i, o := range p.Options {
-		var part string
-		if p.isDisplayVotePercent() {
-			part = fmt.Sprintf(" (%.0f%%)", 100.*float64(votesForOption[o.ID])/float64(len(polledUsers)))
-			if votesForOption[o.ID] != o.Ctr {
-				log.Printf("Counter for option #%d is off: %d stored vs. %d counted", o.ID, o.Ctr, votesForOption[o.ID])
-			}
-		} else {
-			part = ""
-		}
-		listing += emoji.Sprint(fmt.Sprintf("\n:ballot_box: <b>%s</b>%s", html.EscapeString(o.Text), part))
-
+		// Only display the option if there is at least one choice, or else the poll is closed.
 		usersOnAnswer := len(listOfUsers[i])
-		if len(p.Answers) < maxNumberOfUsersListed && usersOnAnswer > 0 {
-			for j := 0; j+1 < usersOnAnswer; j++ {
-				listing += "\n\u251C " + getFormattedUserLink(listOfUsers[i][j])
+		if usersOnAnswer > 0 || p.isInactive() {
+			var part string
+			if p.isDisplayVotePercent() {
+				part = fmt.Sprintf(" (%.0f%%)", 100.*float64(votesForOption[o.ID])/float64(len(polledUsers)))
+				if votesForOption[o.ID] != o.Ctr {
+					log.Printf("Counter for option #%d is off: %d stored vs. %d counted", o.ID, o.Ctr, votesForOption[o.ID])
+				}
+			} else {
+				part = ""
 			}
-			listing += "\n\u2514 " + getFormattedUserLink(listOfUsers[i][usersOnAnswer-1])
+			listing += emoji.Sprint(fmt.Sprintf("\n:ballot_box: <b>%s</b>%s", html.EscapeString(o.Text), part))
+
+			if len(p.Answers) < maxNumberOfUsersListed && usersOnAnswer > 0 {
+				for j := 0; j+1 < usersOnAnswer; j++ {
+					listing += "\n\u251C " + getFormattedUserLink(listOfUsers[i][j])
+				}
+				listing += "\n\u2514 " + getFormattedUserLink(listOfUsers[i][usersOnAnswer-1])
+			}
+			listing += "\n"
 		}
-		listing += "\n"
 	}
 	listing += emoji.Sprint(fmt.Sprintf("\n%d :busts_in_silhouette:\n", len(polledUsers)))
 	return listing
 }
 
 func buildEditMarkup(p *poll, noOlder, noNewer bool) *tg.InlineKeyboardMarkup {
-	query := fmt.Sprintf("e:%d", p.ID)
-
 	buttonrows := make([][]tg.InlineKeyboardButton, 0)
 	buttonrows = append(buttonrows, make([]tg.InlineKeyboardButton, 0))
 	buttonrows = append(buttonrows, make([]tg.InlineKeyboardButton, 0))
 	buttonrows = append(buttonrows, make([]tg.InlineKeyboardButton, 0))
 
-	buttonLast := tg.NewInlineKeyboardButtonData("\u2B05", query+":-")
-	buttonNext := tg.NewInlineKeyboardButtonData("\u27A1", query+":+")
+	buttonLast := tg.NewInlineKeyboardButtonData("\u2B05", p.fmtQuery(qryPrevPoll))
+	buttonNext := tg.NewInlineKeyboardButtonData("\u27A1", p.fmtQuery(qryNextPoll))
 	if noOlder {
-		buttonLast = tg.NewInlineKeyboardButtonData("\u2B05", "dummy")
+		buttonLast = tg.NewInlineKeyboardButtonData(emoji.Sprint(":checkered_flag: (EOL)"), qryDummy)
 	}
 	if noNewer {
-		buttonNext = tg.NewInlineKeyboardButtonData("\u27A1", "dummy")
+		buttonNext = tg.NewInlineKeyboardButtonData(emoji.Sprint(":checkered_flag: (EOL)"), qryDummy)
 	}
 	buttonrows[0] = append(buttonrows[0], buttonLast, buttonNext)
-	buttonInactive := tg.NewInlineKeyboardButtonData(locToggleOpen, query+":c")
+
+	buttonInactiveText := locToggleOpen
 	if p.isInactive() {
-		buttonInactive = tg.NewInlineKeyboardButtonData(locToggleInactive, query+":c")
+		buttonInactiveText = locToggleInactive
 	}
+	buttonInactive := tg.NewInlineKeyboardButtonData(buttonInactiveText, p.fmtQuery(qryToggleActive))
 	buttonrows[1] = append(buttonrows[1], buttonInactive)
 
-	buttonMultipleChoice := tg.NewInlineKeyboardButtonData(locToggleSingleChoice, query+":m")
+	buttonMultipleChoiceText := locToggleSingleChoice
 	if p.isMultipleChoice() {
-		buttonMultipleChoice = tg.NewInlineKeyboardButtonData(locToggleMultipleChoice, query+":m")
+		buttonMultipleChoiceText = locToggleMultipleChoice
 	}
+	buttonMultipleChoice := tg.NewInlineKeyboardButtonData(buttonMultipleChoiceText, p.fmtQuery(qryToggleMultipleChoice))
 	buttonrows[1] = append(buttonrows[1], buttonMultipleChoice)
 
-	buttonEditQuestion := tg.NewInlineKeyboardButtonData(locEditQuestionButton, query+":q")
-	buttonAddOptions := tg.NewInlineKeyboardButtonData(locAddOptionButton, query+":o")
-
+	buttonEditQuestion := tg.NewInlineKeyboardButtonData(locEditQuestionButton, p.fmtQuery(qryEditQuestion))
+	buttonAddOptions := tg.NewInlineKeyboardButtonData(locAddOptionButton, p.fmtQuery(qryAddOptions))
 	buttonrows[2] = append(buttonrows[2], buttonEditQuestion, buttonAddOptions)
 	markup := tg.NewInlineKeyboardMarkup(buttonrows...)
 
@@ -233,8 +235,9 @@ func buildEditMarkup(p *poll, noOlder, noNewer bool) *tg.InlineKeyboardMarkup {
 }
 
 func getFormattedUserLink(u *tg.User) string {
-	return fmt.Sprintf("<a href=\"tg://user?id=%v\">%s</a>", u.ID, html.EscapeString(getDisplayUserName(u)))
+	return fmt.Sprintf("<a href=\"tg://user?id=%d\">%s</a>", u.ID, html.EscapeString(getDisplayUserName(u)))
 }
+
 func getDisplayUserName(u *tg.User) string {
 	name := u.FirstName
 	if len(u.LastName) > 0 {

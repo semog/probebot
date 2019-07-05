@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	tg "github.com/semog/telegram-bot-api"
 )
 
@@ -52,6 +54,10 @@ type poll struct {
 	DisplayPercent int
 	Options        []option
 	Answers        []answer
+}
+
+func (poll *poll) fmtQuery(query string) string {
+	return fmt.Sprintf("%c:%d:%s", qryEditPayload, poll.ID, query)
 }
 
 func (poll *poll) isInactive() bool {

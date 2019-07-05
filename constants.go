@@ -1,8 +1,17 @@
 package main
 
-const createNewPollQuery = "createNewPoll"
-const createPollQuery = "createpoll"
-const pollDoneQuery = "polldone"
+const qryDummy = "dummy"
+const qryCreateNewPoll = "createNewPoll"
+const qryCreatePoll = "createpoll"
+const qryPollDone = "polldone"
+
+const qryEditPayload = 'e'
+const qryPrevPoll = "-"
+const qryNextPoll = "+"
+const qryToggleActive = "c"
+const qryToggleMultipleChoice = "m"
+const qryEditQuestion = "q"
+const qryAddOptions = "o"
 
 const (
 	ohHi = iota
@@ -31,3 +40,5 @@ const (
 
 var maxNumberOfUsersListed = 100
 var maxPollsInlineQuery = 5
+
+const lineSep = "\u257C\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u257E"

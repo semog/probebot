@@ -36,7 +36,7 @@ func handleInlineQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 		IsPersonal:        true,
 		CacheTime:         0,
 		SwitchPMText:      locCreateNewPoll,
-		SwitchPMParameter: createNewPollQuery,
+		SwitchPMParameter: qryCreateNewPoll,
 	}
 
 	_, err = bot.AnswerInlineQuery(inlineConfig)
@@ -90,7 +90,7 @@ func handleInlineQueryAdmin(bot *tg.BotAPI, update tg.Update, st Store) error {
 		IsPersonal:        true,
 		CacheTime:         0,
 		SwitchPMText:      locCreateNewPoll,
-		SwitchPMParameter: createNewPollQuery,
+		SwitchPMParameter: qryCreateNewPoll,
 	}
 
 	_, err = bot.AnswerInlineQuery(inlineConfig)

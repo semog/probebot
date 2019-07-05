@@ -11,7 +11,7 @@ import (
 )
 
 func handleCallbackQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
-	if update.CallbackQuery.Data == "dummy" {
+	if update.CallbackQuery.Data == qryDummy {
 		callbackConfig := tg.NewCallback(
 			update.CallbackQuery.ID,
 			"")
@@ -23,15 +23,15 @@ func handleCallbackQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 		return nil
 	}
 
-	if update.CallbackQuery.Data[0] == 'e' {
+	if update.CallbackQuery.Data[0] == qryEditPayload {
 		return handlePollEditQuery(bot, update, st)
 	}
 
-	if update.CallbackQuery.Data == createPollQuery {
+	if update.CallbackQuery.Data == qryCreatePoll {
 		return sendNewQuestionMessage(bot, update, st)
 	}
 
-	if strings.Contains(update.CallbackQuery.Data, pollDoneQuery) {
+	if strings.Contains(update.CallbackQuery.Data, qryPollDone) {
 		return handlePollDoneQuery(bot, update, st)
 	}
 
@@ -241,31 +241,31 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 	toggleInactive := false
 	toggleMultipleChoice := false
 	switch splits[2] {
-	case "+":
+	case qryNextPoll:
 		p, err = st.GetPollNewer(pollid, update.CallbackQuery.From.ID)
 		if err != nil {
 			log.Printf("could not get older poll: %v\n", err)
 			noNewer = true
 		}
-	case "-":
+	case qryPrevPoll:
 		p, err = st.GetPollOlder(pollid, update.CallbackQuery.From.ID)
 		if err != nil {
 			log.Printf("could not get older poll: %v\n", err)
 			noOlder = true
 		}
-	case "c":
+	case qryToggleActive:
 		p, err = st.GetPoll(pollid)
 		if err != nil {
 			log.Printf("could not get poll: %v\n", err)
 		}
 		toggleInactive = true
-	case "m":
+	case qryToggleMultipleChoice:
 		p, err = st.GetPoll(pollid)
 		if err != nil {
 			log.Printf("could not get poll: %v\n", err)
 		}
 		toggleMultipleChoice = true
-	case "o":
+	case qryAddOptions:
 		state := waitingForOption
 		err = st.SaveState(update.CallbackQuery.From.ID, pollid, state)
 		if err != nil {
@@ -278,7 +278,7 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 			return fmt.Errorf("could not send message: %v", err)
 		}
 		return nil
-	case "q":
+	case qryEditQuestion:
 		state := editQuestion
 		err = st.SaveState(update.CallbackQuery.From.ID, pollid, state)
 		if err != nil {
@@ -322,8 +322,8 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 		}
 	}
 
-	body := "This is the poll currently selected:\n<pre>\n"
-	body += p.Question + "\n"
+	body := "Currently selected Poll:\n<pre>\n"
+	body += p.Question + "\n" + lineSep + "\n"
 	for i, o := range p.Options {
 		body += fmt.Sprintf("%d. %s", i+1, o.Text) + "\n"
 	}

@@ -132,8 +132,8 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 			return fmt.Errorf("could not get poll: %v", err)
 		}
 
-		body := "This is the poll currently selected:\n<pre>\n"
-		body += p.Question + "\n"
+		body := "Currently selected Poll:\n<pre>\n"
+		body += p.Question + "\n" + lineSep + "\n"
 		for i, o := range p.Options {
 			body += fmt.Sprintf("%d. %s", i+1, o.Text) + "\n"
 		}
