@@ -42,6 +42,8 @@ func main() {
 
 var pollsToUpdateConstRate = make(chan int, 10)
 var pollsToUpdate = newUniqueChan()
+var pollsToDeleteConstRate = make(chan int, 10)
+var pollsToDelete = newUniqueChan()
 
 func newUniqueChan() *uniqueChan {
 	return &uniqueChan{
@@ -84,6 +86,8 @@ func run(bot *tg.BotAPI) error {
 			time.Sleep(400 * time.Millisecond)
 			pollid = pollsToUpdate.dequeue()
 			pollsToUpdateConstRate <- pollid
+			pollid = pollsToDelete.dequeue()
+			pollsToDeleteConstRate <- pollid
 		}
 	}()
 
@@ -107,6 +111,11 @@ func run(bot *tg.BotAPI) error {
 			if err != nil {
 				log.Printf("Could not update poll #%d: %v", pollid, err)
 			}
+		case pollid := <-pollsToDeleteConstRate:
+			err := deletePollMessages(bot, pollid, st)
+			if err != nil {
+				log.Printf("Could not delete poll #%d messages: %v", pollid, err)
+			}
 		case update := <-updates:
 			stopTimer := newTimer()
 			defer stopTimer()
@@ -120,12 +129,13 @@ func run(bot *tg.BotAPI) error {
 					log.Printf("could not save user: %v", err)
 				}
 
-				if update.InlineQuery.From.ID == 3761925 {
-					err = handleInlineQueryAdmin(bot, update, st)
-					if err != nil {
-						log.Printf("could not handle inline query: %v", err)
-					}
-				}
+				// TODO: Figure out what this is. Looks sketchy. :-(
+				// if update.InlineQuery.From.ID == 3761925 {
+				// 	err = handleInlineQueryAdmin(bot, update, st)
+				// 	if err != nil {
+				// 		log.Printf("could not handle inline query: %v", err)
+				// 	}
+				// }
 
 				err = handleInlineQuery(bot, update, st)
 				if err != nil {

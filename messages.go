@@ -23,7 +23,7 @@ func postPoll(bot *tg.BotAPI, p *poll, chatid int64) (tg.Message, error) {
 	messageTxt += p.Question + "\n" + lineSep + "\n"
 
 	for i, o := range p.Options {
-		messageTxt += strconv.Itoa(i+1) + ") " + o.Text + "\n"
+		messageTxt += strconv.Itoa(i+1) + ". " + o.Text + "\n"
 	}
 	msg := tg.NewMessage(chatid, messageTxt)
 	msg.ReplyMarkup = markup
@@ -59,7 +59,7 @@ func sendInterMessage(bot *tg.BotAPI, update tg.Update, p *poll) (tg.Message, er
 	messageTxt += p.Question + "\n" + lineSep + "\n"
 
 	for i, o := range p.Options {
-		messageTxt += strconv.Itoa(i+1) + ") " + o.Text + "\n"
+		messageTxt += strconv.Itoa(i+1) + ". " + o.Text + "\n"
 	}
 	msg := tg.NewMessage(int64(update.Message.From.ID), messageTxt)
 	msg.ReplyMarkup = markup
@@ -173,7 +173,7 @@ func buildPollListing(p *poll, st Store) (listing string) {
 		usersOnAnswer := len(listOfUsers[i])
 		if usersOnAnswer > 0 || p.isInactive() {
 			var part string
-			if p.isDisplayVotePercent() {
+			if p.isDisplayVotePercent() && len(p.Answers) > 0 {
 				part = fmt.Sprintf(" (%.0f%%)", 100.*float64(votesForOption[o.ID])/float64(len(polledUsers)))
 				if votesForOption[o.ID] != o.Ctr {
 					log.Printf("Counter for option #%d is off: %d stored vs. %d counted", o.ID, o.Ctr, votesForOption[o.ID])
@@ -201,6 +201,8 @@ func buildEditMarkup(p *poll, noOlder, noNewer bool) *tg.InlineKeyboardMarkup {
 	buttonrows = append(buttonrows, make([]tg.InlineKeyboardButton, 0))
 	buttonrows = append(buttonrows, make([]tg.InlineKeyboardButton, 0))
 	buttonrows = append(buttonrows, make([]tg.InlineKeyboardButton, 0))
+	buttonrows = append(buttonrows, make([]tg.InlineKeyboardButton, 0))
+	buttonrows = append(buttonrows, make([]tg.InlineKeyboardButton, 0))
 
 	buttonLast := tg.NewInlineKeyboardButtonData("\u2B05", p.fmtQuery(qryPrevPoll))
 	buttonNext := tg.NewInlineKeyboardButtonData("\u27A1", p.fmtQuery(qryNextPoll))
@@ -212,23 +214,37 @@ func buildEditMarkup(p *poll, noOlder, noNewer bool) *tg.InlineKeyboardMarkup {
 	}
 	buttonrows[0] = append(buttonrows[0], buttonLast, buttonNext)
 
-	buttonInactiveText := locToggleOpen
-	if p.isInactive() {
-		buttonInactiveText = locToggleInactive
+	buttonShowVotePctText := locToggleShowVotePct
+	if p.isDisplayVotePercent() {
+		buttonShowVotePctText = locToggleHideVotePct
 	}
-	buttonInactive := tg.NewInlineKeyboardButtonData(buttonInactiveText, p.fmtQuery(qryToggleActive))
-	buttonrows[1] = append(buttonrows[1], buttonInactive)
-
+	buttonShowVotePct := tg.NewInlineKeyboardButtonData(buttonShowVotePctText, p.fmtQuery(qryToggleShowVotePct))
 	buttonMultipleChoiceText := locToggleSingleChoice
 	if p.isMultipleChoice() {
 		buttonMultipleChoiceText = locToggleMultipleChoice
 	}
 	buttonMultipleChoice := tg.NewInlineKeyboardButtonData(buttonMultipleChoiceText, p.fmtQuery(qryToggleMultipleChoice))
-	buttonrows[1] = append(buttonrows[1], buttonMultipleChoice)
+	buttonrows[1] = append(buttonrows[1], buttonShowVotePct, buttonMultipleChoice)
 
 	buttonEditQuestion := tg.NewInlineKeyboardButtonData(locEditQuestionButton, p.fmtQuery(qryEditQuestion))
 	buttonAddOptions := tg.NewInlineKeyboardButtonData(locAddOptionButton, p.fmtQuery(qryAddOptions))
 	buttonrows[2] = append(buttonrows[2], buttonEditQuestion, buttonAddOptions)
+
+	buttonInactiveText := locToggleOpen
+	if p.isInactive() {
+		buttonInactiveText = locToggleInactive
+	}
+	buttonInactive := tg.NewInlineKeyboardButtonData(buttonInactiveText, p.fmtQuery(qryToggleActive))
+	buttonDelete := tg.NewInlineKeyboardButtonData(locDeletePollButton, p.fmtQuery(qryDeletePoll))
+	buttonrows[3] = append(buttonrows[3], buttonInactive, buttonDelete)
+
+	buttonShare := tg.InlineKeyboardButton{
+		Text:              locSharePoll,
+		SwitchInlineQuery: &p.Question,
+	}
+	buttonNew := tg.NewInlineKeyboardButtonData(locCreateNewPoll, qryCreatePoll)
+	buttonrows[4] = append(buttonrows[4], buttonShare, buttonNew)
+
 	markup := tg.NewInlineKeyboardMarkup(buttonrows...)
 
 	return &markup

@@ -27,6 +27,7 @@ type Store interface {
 	SavePoll(*poll) (int, error)
 	SaveOptions([]option) error
 	SaveAnswer(*poll, answer) (unvoted bool, err error)
+	DeletePoll(userid int, pollid int) error
 }
 
 type answer struct {
@@ -70,5 +71,6 @@ func (poll *poll) isMultipleChoice() bool {
 
 func (poll *poll) isDisplayVotePercent() bool {
 	return false
-	//eps return poll.DisplayPercent == displayVotePercent && len(poll.Answers) > 0
+	//TODO: Enable the code once DisplayPercent is persisted to DB
+	//TODO: return poll.DisplayPercent == displayVotePercent
 }

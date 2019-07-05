@@ -199,6 +199,11 @@ func updatePollMessages(bot *tg.BotAPI, pollid int, st Store) error {
 	return nil
 }
 
+func deletePollMessages(bot *tg.BotAPI, pollid int, st Store) error {
+	log.Printf("TODO: delete existing shared poll messages.")
+	return nil
+}
+
 func handlePollDoneQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 	splits := strings.Split(update.CallbackQuery.Data, ":")
 	if len(splits) < 2 {
@@ -240,6 +245,7 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 	noOlder := false
 	toggleInactive := false
 	toggleMultipleChoice := false
+	toggleShowVotePct := false
 	switch splits[2] {
 	case qryNextPoll:
 		p, err = st.GetPollNewer(pollid, update.CallbackQuery.From.ID)
@@ -265,6 +271,12 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 			log.Printf("could not get poll: %v\n", err)
 		}
 		toggleMultipleChoice = true
+	case qryToggleShowVotePct:
+		p, err = st.GetPoll(pollid)
+		if err != nil {
+			log.Printf("could not get poll: %v\n", err)
+		}
+		toggleShowVotePct = true
 	case qryAddOptions:
 		state := waitingForOption
 		err = st.SaveState(update.CallbackQuery.From.ID, pollid, state)
@@ -291,9 +303,36 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 			return fmt.Errorf("could not send message: %v", err)
 		}
 		return nil
+	case qryDeletePoll:
+		err = st.DeletePoll(update.CallbackQuery.From.ID, pollid)
+		if err != nil {
+			return fmt.Errorf("could not save state: %v", err)
+		}
+		pollsToDelete.enqueue(pollid)
+		// Move to the next poll.
+		p, err = st.GetPollOlder(pollid, update.CallbackQuery.From.ID)
+		if err != nil {
+			log.Printf("could not get older poll: %v\n", err)
+			noOlder = true
+			// Move to the previous poll.
+			p, err = st.GetPollNewer(pollid, update.CallbackQuery.From.ID)
+			if err != nil {
+				log.Printf("could not get older poll: %v\n", err)
+				err = st.SaveState(update.Message.From.ID, -1, ohHi)
+				if err != nil {
+					return fmt.Errorf("could not save state: %v", err)
+				}
+				_, err = sendMainMenuMessage(bot, update)
+				if err != nil {
+					return fmt.Errorf("could not send main menu message: %v", err)
+				}
+				return nil
+			}
+		}
 	default:
 		return fmt.Errorf("query wrongly formatted")
 	}
+
 	if err != nil {
 		p, err = st.GetPoll(pollid)
 		if err != nil {
@@ -307,7 +346,11 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 	}
 
 	if toggleInactive {
-		p.Inactive = 1 - p.Inactive // states are 0 and 1
+		if p.Inactive == open {
+			p.Inactive = inactive
+		} else {
+			p.Inactive = open
+		}
 		_, err = st.SavePoll(p)
 		if err != nil {
 			log.Println("Could not save toggled inactive state.")
@@ -315,10 +358,26 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 	}
 
 	if toggleMultipleChoice {
-		p.Type = 1 - p.Type // states are 0 and 1
+		if p.Type == standard {
+			p.Type = multipleChoice
+		} else {
+			p.Type = standard
+		}
 		_, err = st.SavePoll(p)
 		if err != nil {
 			log.Println("Could not save toggled multiple choice state.")
+		}
+	}
+
+	if toggleShowVotePct {
+		if p.DisplayPercent == displayVotePercent {
+			p.DisplayPercent = hideDisplayVotePercent
+		} else {
+			p.DisplayPercent = displayVotePercent
+		}
+		_, err = st.SavePoll(p)
+		if err != nil {
+			log.Println("Could not save toggled show vote percent state.")
 		}
 	}
 

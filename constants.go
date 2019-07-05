@@ -12,6 +12,8 @@ const qryToggleActive = "c"
 const qryToggleMultipleChoice = "m"
 const qryEditQuestion = "q"
 const qryAddOptions = "o"
+const qryToggleShowVotePct = "v"
+const qryDeletePoll = "d"
 
 const (
 	ohHi = iota

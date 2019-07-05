@@ -73,7 +73,7 @@ func newSQLStore(databaseFile string) *sqlStore {
 		Text TEXT);
 	CREATE TABLE IF NOT EXISTS dialog(
 		UserID INTEGER PRIMARY KEY,
-		PollId INTEGER,
+		PollID INTEGER,
 		state INTEGER);
 	CREATE TABLE IF NOT EXISTS user(
 		ID INTEGER PRIMARY KEY,
@@ -671,6 +671,87 @@ func (st *sqlStore) SavePoll(p *poll) (id int, err error) {
 	id = int(id64)
 
 	return id, nil
+}
+
+func (st *sqlStore) DeletePoll(userid int, pollid int) error {
+	// Ensure this user owns the poll
+	p := &poll{}
+	var err error
+	row := st.db.QueryRow("SELECT UserID, ID FROM poll WHERE UserID = ? AND ID = ? ORDER BY ID ASC LIMIT 1", userid, pollid)
+	if err := row.Scan(&p.UserID, &p.ID); err != nil {
+		return fmt.Errorf("could not scan poll #%d: %v", p.ID, err)
+	}
+
+	tx, err := st.db.Begin()
+	if err != nil {
+		return fmt.Errorf("could not begin database transaction: %v", err)
+	}
+	defer func() {
+		if err != nil {
+			if err := tx.Rollback(); err != nil {
+				log.Printf("could not rollback database change: %v", err)
+			}
+			return
+		}
+		err = tx.Commit()
+	}()
+
+	stmt, err := tx.Prepare("DELETE FROM answer where PollID = ?")
+	if err != nil {
+		return fmt.Errorf("could not prepare answer sql statement: %v", err)
+	}
+	defer close(stmt)
+	_, err = stmt.Exec(pollid)
+	if err != nil {
+		return fmt.Errorf("could not delete poll answers: %v", err)
+	}
+
+	stmt, err = tx.Prepare("DELETE FROM option where PollID = ?")
+	if err != nil {
+		return fmt.Errorf("could not prepare option sql statement: %v", err)
+	}
+	_, err = stmt.Exec(pollid)
+	if err != nil {
+		return fmt.Errorf("could not delete poll options: %v", err)
+	}
+
+	stmt, err = tx.Prepare("DELETE FROM dialog where PollID = ?")
+	if err != nil {
+		return fmt.Errorf("could not prepare dialog sql statement: %v", err)
+	}
+	_, err = stmt.Exec(pollid)
+	if err != nil {
+		return fmt.Errorf("could not delete poll dialog: %v", err)
+	}
+
+	stmt, err = tx.Prepare("DELETE FROM pollinlinemsg where PollID = ?")
+	if err != nil {
+		return fmt.Errorf("could not prepare pollinlinemsg sql statement: %v", err)
+	}
+	_, err = stmt.Exec(pollid)
+	if err != nil {
+		return fmt.Errorf("could not delete poll pollinlinemsg: %v", err)
+	}
+
+	stmt, err = tx.Prepare("DELETE FROM pollmsg where PollID = ?")
+	if err != nil {
+		return fmt.Errorf("could not prepare pollmsg sql statement: %v", err)
+	}
+	_, err = stmt.Exec(pollid)
+	if err != nil {
+		return fmt.Errorf("could not delete poll pollmsg: %v", err)
+	}
+
+	stmt, err = tx.Prepare("DELETE FROM poll where ID = ?")
+	if err != nil {
+		return fmt.Errorf("could not prepare poll sql statement: %v", err)
+	}
+	_, err = stmt.Exec(pollid)
+	if err != nil {
+		return fmt.Errorf("could not delete poll: %v", err)
+	}
+
+	return nil
 }
 
 func contains(slice []int, n int) bool {

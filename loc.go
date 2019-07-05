@@ -14,6 +14,7 @@ var (
 	locEditQuestionButton   = "change question"
 	locAddOption            = "Alright, send options that you want to add to the poll, please."
 	locAddOptionButton      = "add options"
+	locDeletePollButton     = "delete poll"
 	locGotEditQuestion      = "Thanks, the question was changed to \"%s\"."
 	locNoMessageToEdit      = "Sorry, I could not find a poll to edit."
 	locFinishedCreatingPoll = "Finished creating a new poll\n\nPreview:\n"
@@ -25,6 +26,8 @@ var (
 	locToggleOpen           = "close poll"
 	locToggleSingleChoice   = "set multiple choice"
 	locToggleMultipleChoice = "set single choice"
+	locToggleShowVotePct    = "show vote pct"
+	locToggleHideVotePct    = "hide vote pct"
 	locAddedOption          = fmt.Sprintf(
 		"You can add more options by sending messages each containing one option. If you are done, please push the %s button.\n\nPreview:\n",
 		locPollDoneButton)
