@@ -86,6 +86,12 @@ func run(bot *tg.BotAPI) error {
 			time.Sleep(400 * time.Millisecond)
 			pollid = pollsToUpdate.dequeue()
 			pollsToUpdateConstRate <- pollid
+		}
+	}()
+	go func() {
+		var pollid int
+		for {
+			time.Sleep(400 * time.Millisecond)
 			pollid = pollsToDelete.dequeue()
 			pollsToDeleteConstRate <- pollid
 		}

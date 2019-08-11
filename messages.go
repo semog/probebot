@@ -6,6 +6,8 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/semog/gocommon"
+
 	"github.com/kyokomi/emoji"
 	tg "github.com/semog/telegram-bot-api"
 )
@@ -167,24 +169,29 @@ func buildPollListing(p *poll, st Store) (listing string) {
 
 	listing += emoji.Sprintf("<b>%s</b>\n%s", html.EscapeString(p.Question), lineSep)
 	//log.Printf("Create listing for question: %s\n", p.Question)
-
+	numPolledUsers := len(polledUsers)
 	for i, o := range p.Options {
-		// Only display the option if there is at least one choice, or else the poll is closed.
+		// Only display the option if there is at least one choice or if the poll is closed.
 		usersOnAnswer := len(listOfUsers[i])
 		if usersOnAnswer > 0 || p.isInactive() {
-			var part string
-			if p.isDisplayVotePercent() && len(p.Answers) > 0 {
-				part = fmt.Sprintf(" (%.0f%%)", 100.*float64(votesForOption[o.ID])/float64(len(polledUsers)))
-				if votesForOption[o.ID] != o.Ctr {
-					log.Printf("Counter for option #%d is off: %d stored vs. %d counted", o.ID, o.Ctr, votesForOption[o.ID])
+			part := ""
+			if len(p.Answers) > 0 {
+				// Show the number of people that voted for the answer
+				part += fmt.Sprintf(" (%d:peopleemoji:", usersOnAnswer)
+				if p.isDisplayVotePercent() {
+					part += fmt.Sprintf(" %.0f%%", 100.*float64(votesForOption[o.ID])/float64(numPolledUsers))
+					if votesForOption[o.ID] != o.Ctr {
+						log.Printf("Counter for option #%d is off: %d stored vs. %d counted", o.ID, o.Ctr, votesForOption[o.ID])
+					}
 				}
-			} else {
-				part = ""
+				part += ")"
 			}
+
 			listing += emoji.Sprint(fmt.Sprintf("\n:ballot_box: <b>%s</b>%s", html.EscapeString(o.Text), part))
 
-			if len(p.Answers) < maxNumberOfUsersListed && usersOnAnswer > 0 {
-				for j := 0; j+1 < usersOnAnswer; j++ {
+			if usersOnAnswer > 0 {
+				maxNumberDisplayUsers := gocommon.Mini(usersOnAnswer, maxNumberOfUsersListed)
+				for j := 0; j+1 < maxNumberDisplayUsers; j++ {
 					listing += "\n\u251C " + getFormattedUserLink(listOfUsers[i][j])
 				}
 				listing += "\n\u2514 " + getFormattedUserLink(listOfUsers[i][usersOnAnswer-1])
@@ -192,7 +199,7 @@ func buildPollListing(p *poll, st Store) (listing string) {
 			listing += "\n"
 		}
 	}
-	listing += emoji.Sprint(fmt.Sprintf("\n%d :busts_in_silhouette:\n", len(polledUsers)))
+	listing += emoji.Sprint(fmt.Sprintf("\n%d :busts_in_silhouette:\n", numPolledUsers))
 	return listing
 }
 
