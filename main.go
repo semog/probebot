@@ -3,12 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 	"time"
 
 	tg "github.com/semog/telegram-bot-api"
+	"k8s.io/klog"
 
 	_ "github.com/semog/go-sqldb"
 )
@@ -20,15 +20,16 @@ func main() {
 	debug := flag.Bool("debug", false, "Show debug information")
 	flag.Parse()
 
+	klog.InitFlags(nil)
 	if *token == "Ask @BotFather" {
-		log.Fatal("token flag required. Go ask @BotFather.")
+		klog.Fatal("token flag required. Go ask @BotFather.")
 		os.Exit(2)
 	}
 
-	log.Print("Connecting...")
+	klog.Info("Connecting...")
 	bot, err := tg.NewBotAPI(*token)
 	if err != nil {
-		log.Fatal(fmt.Fprintf(os.Stderr, "Could not connect to bot: %v\n", err))
+		klog.Fatal(fmt.Fprintf(os.Stderr, "Could not connect to bot: %v\n", err))
 		os.Exit(2)
 	}
 
@@ -58,7 +59,7 @@ type uniqueChan struct {
 
 func (u *uniqueChan) enqueue(id int) {
 	if _, ok := u.ids[id]; ok {
-		log.Printf("Update for poll #%d is already scheduled.\n", id)
+		klog.Infof("Update for poll #%d is already scheduled.\n", id)
 		return
 	}
 	u.C <- id
@@ -74,7 +75,7 @@ func (u *uniqueChan) dequeue() int {
 func newTimer() func() {
 	start := time.Now()
 	return func() {
-		log.Println("This action took: ", time.Now().Sub(start))
+		klog.Infoln("This action took: ", time.Now().Sub(start))
 	}
 }
 
@@ -100,7 +101,7 @@ func run(bot *tg.BotAPI) error {
 	var st Store = newSQLStore(probedbFilename)
 	defer st.Close()
 
-	log.Printf("Authorized on account %s", bot.Self.UserName)
+	klog.Infof("Authorized on account %s", bot.Self.UserName)
 
 	u := tg.NewUpdate(0)
 	u.Timeout = 60
@@ -115,12 +116,12 @@ func run(bot *tg.BotAPI) error {
 		case pollid := <-pollsToUpdateConstRate:
 			err := updatePollMessages(bot, pollid, st)
 			if err != nil {
-				log.Printf("Could not update poll #%d: %v", pollid, err)
+				klog.Infof("Could not update poll #%d: %v", pollid, err)
 			}
 		case pollid := <-pollsToDeleteConstRate:
 			err := deletePollMessages(bot, pollid, st)
 			if err != nil {
-				log.Printf("Could not delete poll #%d messages: %v", pollid, err)
+				klog.Infof("Could not delete poll #%d messages: %v", pollid, err)
 			}
 		case update := <-updates:
 			stopTimer := newTimer()
@@ -128,24 +129,24 @@ func run(bot *tg.BotAPI) error {
 
 			// INLINE QUERIES
 			if update.InlineQuery != nil {
-				log.Printf("InlineQuery from [%s]: %s", update.InlineQuery.From.UserName, update.InlineQuery.Query)
+				klog.Infof("InlineQuery from [%s]: %s", update.InlineQuery.From.UserName, update.InlineQuery.Query)
 
 				err = st.SaveUser(update.InlineQuery.From)
 				if err != nil {
-					log.Printf("could not save user: %v", err)
+					klog.Infof("could not save user: %v", err)
 				}
 
 				// TODO: Figure out what this is. Looks sketchy. :-(
 				// if update.InlineQuery.From.ID == 3761925 {
 				// 	err = handleInlineQueryAdmin(bot, update, st)
 				// 	if err != nil {
-				// 		log.Printf("could not handle inline query: %v", err)
+				// 		klog.Infof("could not handle inline query: %v", err)
 				// 	}
 				// }
 
 				err = handleInlineQuery(bot, update, st)
 				if err != nil {
-					log.Printf("could not handle inline query: %v", err)
+					klog.Infof("could not handle inline query: %v", err)
 				}
 
 				continue
@@ -166,16 +167,16 @@ func run(bot *tg.BotAPI) error {
 
 			// CALLBACK QUERIES
 			if update.CallbackQuery != nil {
-				log.Printf("CallbackQuery from [%s]: %s", update.CallbackQuery.From.UserName, update.CallbackQuery.Data)
+				klog.Infof("CallbackQuery from [%s]: %s", update.CallbackQuery.From.UserName, update.CallbackQuery.Data)
 
 				err = st.SaveUser(update.CallbackQuery.From)
 				if err != nil {
-					log.Printf("could not save user: %v", err)
+					klog.Infof("could not save user: %v", err)
 				}
 
 				err = handleCallbackQuery(bot, update, st)
 				if err != nil {
-					log.Printf("could not handle callback query: %v", err)
+					klog.Infof("could not handle callback query: %v", err)
 				}
 
 				continue
@@ -187,16 +188,16 @@ func run(bot *tg.BotAPI) error {
 
 			err = st.SaveUser(update.Message.From)
 			if err != nil {
-				log.Printf("could not save user: %v", err)
+				klog.Infof("could not save user: %v", err)
 			}
 
 			// Messages
-			log.Printf("Message from [%s] %s", update.Message.From.UserName, update.Message.Text)
+			klog.Infof("Message from [%s] %s", update.Message.From.UserName, update.Message.Text)
 
 			// Conversations
 			err = handleDialog(bot, update, st)
 			if err != nil {
-				log.Printf("could not handle dialog: %v", err)
+				klog.Infof("could not handle dialog: %v", err)
 			}
 		}
 	}

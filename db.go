@@ -3,11 +3,11 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/semog/go-sqldb"
 	tg "github.com/semog/telegram-bot-api"
+	"k8s.io/klog"
 )
 
 type sqlStore struct {
@@ -17,7 +17,7 @@ type sqlStore struct {
 func (st *sqlStore) Close() {
 	err := st.db.Close()
 	if err != nil {
-		log.Printf("could not close database properly: %v\n", err)
+		klog.Infof("could not close database properly: %v\n", err)
 	}
 }
 
@@ -28,7 +28,7 @@ type closable interface {
 func close(c closable) {
 	err := c.Close()
 	if err != nil {
-		log.Printf("could not close stmt or rows properly: %v\n", err)
+		klog.Infof("could not close stmt or rows properly: %v\n", err)
 	}
 }
 
@@ -36,7 +36,7 @@ func newSQLStore(databaseFile string) *sqlStore {
 	st := &sqlStore{}
 	err := st.Init(databaseFile)
 	if err != nil {
-		log.Fatalf("could not open database %s: %v", databaseFile, err)
+		klog.Fatalf("could not open database %s: %v", databaseFile, err)
 	}
 	return st
 }
@@ -276,7 +276,7 @@ func (st *sqlStore) SaveAnswer(p *poll, a answer) (unvoted bool, err error) {
 	defer func() {
 		if err != nil {
 			if err := tx.Rollback(); err != nil {
-				log.Printf("could not rollback database change: %v", err)
+				klog.Infof("could not rollback database change: %v", err)
 			}
 			return
 		}
@@ -396,7 +396,7 @@ func (st *sqlStore) AddMsgToPoll(pollid int, messageid int, chatid int64) error 
 	defer func() {
 		if err != nil {
 			if err := tx.Rollback(); err != nil {
-				log.Printf("could not rollback database change: %v", err)
+				klog.Infof("could not rollback database change: %v", err)
 			}
 			return
 		}
@@ -425,7 +425,7 @@ func (st *sqlStore) AddInlineMsgToPoll(pollid int, inlinemessageid string) error
 	defer func() {
 		if err != nil {
 			if err := tx.Rollback(); err != nil {
-				log.Printf("could not rollback database change: %v", err)
+				klog.Infof("could not rollback database change: %v", err)
 			}
 			return
 		}
@@ -455,7 +455,7 @@ func (st *sqlStore) RemoveInlineMsg(inlinemessageid string) error {
 	defer func() {
 		if err != nil {
 			if err := tx.Rollback(); err != nil {
-				log.Printf("could not rollback database change: %v", err)
+				klog.Infof("could not rollback database change: %v", err)
 			}
 			return
 		}
@@ -488,7 +488,7 @@ func (st *sqlStore) SaveOptions(options []option) error {
 	defer func() {
 		if err != nil {
 			if err := tx.Rollback(); err != nil {
-				log.Printf("could not rollback database change: %v", err)
+				klog.Infof("could not rollback database change: %v", err)
 			}
 			return
 		}
@@ -524,7 +524,7 @@ func (st *sqlStore) SaveUser(u *tg.User) error {
 	defer func() {
 		if err != nil {
 			if err := tx.Rollback(); err != nil {
-				log.Printf("could not rollback database change: %v", err)
+				klog.Infof("could not rollback database change: %v", err)
 			}
 			return
 		}
@@ -576,7 +576,7 @@ func (st *sqlStore) SavePoll(p *poll) (id int, err error) {
 	defer func() {
 		if err != nil {
 			if err := tx.Rollback(); err != nil {
-				log.Printf("could not rollback database change: %v", err)
+				klog.Infof("could not rollback database change: %v", err)
 			}
 			return
 		}
@@ -634,7 +634,7 @@ func (st *sqlStore) DeletePoll(userid int, pollid int) error {
 	defer func() {
 		if err != nil {
 			if err := tx.Rollback(); err != nil {
-				log.Printf("could not rollback database change: %v", err)
+				klog.Infof("could not rollback database change: %v", err)
 			}
 			return
 		}

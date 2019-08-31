@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 
 	tg "github.com/semog/telegram-bot-api"
+	"k8s.io/klog"
 )
 
 func handleInlineQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
@@ -20,7 +20,7 @@ func handleInlineQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 	}
 	results := make([]interface{}, len(polls))
 	for i, p := range polls {
-		log.Println(p)
+		klog.Infoln(p)
 		article := tg.NewInlineQueryResultArticleHTML(strconv.Itoa(p.ID), p.Question, buildPollListing(p, st))
 		if len(p.Options) > 0 {
 			article.ReplyMarkup = buildPollMarkup(p)
@@ -74,7 +74,7 @@ func handleInlineQueryAdmin(bot *tg.BotAPI, update tg.Update, st Store) error {
 	}
 	results := make([]interface{}, len(polls))
 	for i, p := range polls {
-		log.Println(p)
+		klog.Infoln(p)
 		article := tg.NewInlineQueryResultArticleHTML(strconv.Itoa(p.ID), p.Question, buildPollListing(p, st))
 		if len(p.Options) > 0 && active {
 			article.ReplyMarkup = buildPollMarkup(p)

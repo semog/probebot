@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 	"time"
 
 	tg "github.com/semog/telegram-bot-api"
+	"k8s.io/klog"
 )
 
 func handleCallbackQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
@@ -130,8 +130,8 @@ func updatePollMessages(bot *tg.BotAPI, pollid int, st Store) error {
 
 	//_, err = bot.Send(ed)
 	//if err != nil {
-	//log.Printf("Could not edit message: %v \nThe message was: %s\n", err, ed.Text)
-	//log.Printf("Could not edit message: %v\n", err)
+	//klog.Infof("Could not edit message: %v \nThe message was: %s\n", err, ed.Text)
+	//klog.Infof("Could not edit message: %v\n", err)
 	//splits := strings.Split(ed.Text, "\n")
 
 	//ed.Text = ""
@@ -140,10 +140,10 @@ func updatePollMessages(bot *tg.BotAPI, pollid int, st Store) error {
 	//ed.Text += l + "\n"
 	//}
 	//}
-	//log.Printf("try again:\n %s", ed.Text)
+	//klog.Infof("try again:\n %s", ed.Text)
 	//_, err = bot.Send(ed)
 	//if err != nil {
-	//log.Printf("could not update message: %v\n", err)
+	//klog.Infof("could not update message: %v\n", err)
 	//continue
 	//}
 	//}
@@ -164,20 +164,20 @@ func updatePollMessages(bot *tg.BotAPI, pollid int, st Store) error {
 		_, err := bot.Send(ed)
 		if err != nil {
 			if strings.Contains(err.Error(), "MESSAGE_ID_INVALID") {
-				log.Printf("Remove inline message %s\n", msg.InlineMessageID)
+				klog.Infof("Remove inline message %s\n", msg.InlineMessageID)
 				st.RemoveInlineMsg(msg.InlineMessageID)
 				continue
 			}
 			// if strings.Contains(err.Error(), "chat not found") {
-			// 	log.Printf("Remove inline message %s\n", msg.InlineMessageID)
+			// 	klog.Infof("Remove inline message %s\n", msg.InlineMessageID)
 			// 	st.RemoveInlineMsg(msg.InlineMessageID)
 			// }
 			if strings.Contains(err.Error(), "message is not modified") {
 				continue
 			}
 			time.Sleep(20 * time.Millisecond)
-			log.Printf("\n\n\nCould not edit inline message: %v \nThe message was: %s\n", err, ed.Text)
-			log.Printf("Could not edit inline message: %v\n", err)
+			klog.Infof("\n\n\nCould not edit inline message: %v \nThe message was: %s\n", err, ed.Text)
+			klog.Infof("Could not edit inline message: %v\n", err)
 			splits := strings.Split(ed.Text, "\n")
 
 			ed.Text = ""
@@ -186,10 +186,10 @@ func updatePollMessages(bot *tg.BotAPI, pollid int, st Store) error {
 					ed.Text += l + "\n"
 				}
 			}
-			log.Printf("try again:\n %s", ed.Text)
+			klog.Infof("try again:\n %s", ed.Text)
 			_, err = bot.Send(ed)
 			if err != nil {
-				log.Printf("could not update inline message: %v\n", err)
+				klog.Infof("could not update inline message: %v\n", err)
 				continue
 			}
 		}
@@ -200,7 +200,7 @@ func updatePollMessages(bot *tg.BotAPI, pollid int, st Store) error {
 }
 
 func deletePollMessages(bot *tg.BotAPI, pollid int, st Store) error {
-	log.Printf("TODO: delete existing shared poll messages.")
+	klog.Infof("TODO: delete existing shared poll messages.")
 	return nil
 }
 
@@ -232,7 +232,7 @@ func handlePollDoneQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 	splits := strings.Split(update.CallbackQuery.Data, ":")
 	if len(splits) < 3 {
-		log.Println(splits)
+		klog.Infoln(splits)
 		return fmt.Errorf("query wrongly formatted")
 	}
 	pollid, err := strconv.Atoi(splits[1])
@@ -250,31 +250,31 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 	case qryNextPoll:
 		p, err = st.GetPollNewer(pollid, update.CallbackQuery.From.ID)
 		if err != nil {
-			log.Printf("could not get older poll: %v\n", err)
+			klog.Infof("could not get older poll: %v\n", err)
 			noNewer = true
 		}
 	case qryPrevPoll:
 		p, err = st.GetPollOlder(pollid, update.CallbackQuery.From.ID)
 		if err != nil {
-			log.Printf("could not get older poll: %v\n", err)
+			klog.Infof("could not get older poll: %v\n", err)
 			noOlder = true
 		}
 	case qryToggleActive:
 		p, err = st.GetPoll(pollid)
 		if err != nil {
-			log.Printf("could not get poll: %v\n", err)
+			klog.Infof("could not get poll: %v\n", err)
 		}
 		toggleInactive = true
 	case qryToggleMultipleChoice:
 		p, err = st.GetPoll(pollid)
 		if err != nil {
-			log.Printf("could not get poll: %v\n", err)
+			klog.Infof("could not get poll: %v\n", err)
 		}
 		toggleMultipleChoice = true
 	case qryToggleShowVotePct:
 		p, err = st.GetPoll(pollid)
 		if err != nil {
-			log.Printf("could not get poll: %v\n", err)
+			klog.Infof("could not get poll: %v\n", err)
 		}
 		toggleShowVotePct = true
 	case qryAddOptions:
@@ -312,12 +312,12 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 		// Move to the next poll.
 		p, err = st.GetPollOlder(pollid, update.CallbackQuery.From.ID)
 		if err != nil {
-			log.Printf("could not get older poll: %v\n", err)
+			klog.Infof("could not get older poll: %v\n", err)
 			noOlder = true
 			// Move to the previous poll.
 			p, err = st.GetPollNewer(pollid, update.CallbackQuery.From.ID)
 			if err != nil {
-				log.Printf("could not get older poll: %v\n", err)
+				klog.Infof("could not get older poll: %v\n", err)
 				err = st.SaveState(update.Message.From.ID, -1, ohHi)
 				if err != nil {
 					return fmt.Errorf("could not save state: %v", err)
@@ -353,7 +353,7 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 		}
 		_, err = st.SavePoll(p)
 		if err != nil {
-			log.Println("Could not save toggled inactive state.")
+			klog.Infoln("Could not save toggled inactive state.")
 		}
 	}
 
@@ -365,7 +365,7 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 		}
 		_, err = st.SavePoll(p)
 		if err != nil {
-			log.Println("Could not save toggled multiple choice state.")
+			klog.Infoln("Could not save toggled multiple choice state.")
 		}
 	}
 
@@ -377,7 +377,7 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 		}
 		_, err = st.SavePoll(p)
 		if err != nil {
-			log.Println("Could not save toggled show vote percent state.")
+			klog.Infoln("Could not save toggled show vote percent state.")
 		}
 	}
 

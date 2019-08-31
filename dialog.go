@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	tg "github.com/semog/telegram-bot-api"
+	"k8s.io/klog"
 )
 
 func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
@@ -26,13 +26,13 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 	if err != nil {
 		// could not retrieve state -> state is zero
 		state = ohHi
-		log.Printf("could not get state from database: %v\n", err)
+		klog.Infof("could not get state from database: %v\n", err)
 	}
 
 	if strings.Contains(update.Message.Text, locEditCommand) {
 		polls, err := st.GetPollsByUser(update.Message.From.ID)
 		if err != nil || len(polls) == 0 {
-			log.Printf("could not get polls of user with userid %d: %v", update.Message.From.ID, err)
+			klog.Infof("could not get polls of user with userid %d: %v", update.Message.From.ID, err)
 			msg := tg.NewMessage(int64(update.Message.From.ID), locNoMessageToEdit)
 			_, err = bot.Send(&msg)
 			if err != nil {

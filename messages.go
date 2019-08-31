@@ -3,13 +3,12 @@ package main
 import (
 	"fmt"
 	"html"
-	"log"
 	"strconv"
 
-	"github.com/semog/gocommon"
-
 	"github.com/kyokomi/emoji"
+	"github.com/semog/gocommon"
 	tg "github.com/semog/telegram-bot-api"
+	"k8s.io/klog"
 )
 
 func postPoll(bot *tg.BotAPI, p *poll, chatid int64) (tg.Message, error) {
@@ -29,7 +28,6 @@ func postPoll(bot *tg.BotAPI, p *poll, chatid int64) (tg.Message, error) {
 	}
 	msg := tg.NewMessage(chatid, messageTxt)
 	msg.ReplyMarkup = markup
-
 	return bot.Send(msg)
 }
 
@@ -40,7 +38,6 @@ func sendMainMenuMessage(bot *tg.BotAPI, update tg.Update) (tg.Message, error) {
 	messageTxt := locMainMenu
 	msg := tg.NewMessage(int64(update.Message.From.ID), messageTxt)
 	msg.ReplyMarkup = markup
-
 	return bot.Send(msg)
 }
 
@@ -65,7 +62,6 @@ func sendInterMessage(bot *tg.BotAPI, update tg.Update, p *poll) (tg.Message, er
 	}
 	msg := tg.NewMessage(int64(update.Message.From.ID), messageTxt)
 	msg.ReplyMarkup = markup
-
 	return bot.Send(msg)
 }
 
@@ -94,31 +90,12 @@ func sendEditMessage(bot *tg.BotAPI, update tg.Update, p *poll) (tg.Message, err
 	msg.ParseMode = tg.ModeHTML
 
 	msg.ReplyMarkup = buildEditMarkup(p, false, false)
-
 	return bot.Send(&msg)
 }
 
 func buildPollMarkup(p *poll) *tg.InlineKeyboardMarkup {
 	buttonrows := make([][]tg.InlineKeyboardButton, 0) //len(p.Options), len(p.Options))
 	row := -1
-	polledUsers := make(map[int]struct{})
-
-	votesForOption := make(map[int]int)
-	for _, a := range p.Answers {
-		if !p.isMultipleChoice() {
-			if _, ok := polledUsers[a.UserID]; ok {
-				continue
-			}
-		}
-
-		for _, o := range p.Options {
-
-			if a.OptionID == o.ID {
-				votesForOption[o.ID]++
-				polledUsers[a.UserID] = struct{}{}
-			}
-		}
-	}
 
 	for _, o := range p.Options {
 		textWidth := 0
@@ -132,13 +109,12 @@ func buildPollMarkup(p *poll) *tg.InlineKeyboardMarkup {
 			row++
 			buttonrows = append(buttonrows, make([]tg.InlineKeyboardButton, 0))
 		}
-		label := fmt.Sprintf("%s (%d)", o.Text, votesForOption[o.ID])
+		label := fmt.Sprintf("%s", o.Text)
 		callback := fmt.Sprintf("%d:%d", p.ID, o.ID)
 		button := tg.NewInlineKeyboardButtonData(label, callback)
 		buttonrows[row] = append(buttonrows[row], button)
 	}
 	markup := tg.NewInlineKeyboardMarkup(buttonrows...)
-
 	return &markup
 }
 
@@ -157,7 +133,7 @@ func buildPollListing(p *poll, st Store) (listing string) {
 				votesForOption[o.ID]++
 				u, err := st.GetUser(a.UserID)
 				if err != nil {
-					log.Printf("could not get user: %v", err)
+					klog.Infof("could not get user: %v", err)
 					listOfUsers[i] = append(listOfUsers[i], &tg.User{ID: a.UserID})
 					continue
 				}
@@ -168,7 +144,7 @@ func buildPollListing(p *poll, st Store) (listing string) {
 	}
 
 	listing += emoji.Sprintf("<b>%s</b>\n%s", html.EscapeString(p.Question), lineSep)
-	//log.Printf("Create listing for question: %s\n", p.Question)
+	//klog.Infof("Create listing for question: %s\n", p.Question)
 	numPolledUsers := len(polledUsers)
 	for i, o := range p.Options {
 		// Only display the option if there is at least one choice or if the poll is closed.
@@ -177,11 +153,11 @@ func buildPollListing(p *poll, st Store) (listing string) {
 			part := ""
 			if len(p.Answers) > 0 {
 				// Show the number of people that voted for the answer
-				part += fmt.Sprintf(" (%d:peopleemoji:", usersOnAnswer)
+				part += emoji.Sprintf(" (%d :busts_in_silhouette:", usersOnAnswer)
 				if p.isDisplayVotePercent() {
 					part += fmt.Sprintf(" %.0f%%", 100.*float64(votesForOption[o.ID])/float64(numPolledUsers))
 					if votesForOption[o.ID] != o.Ctr {
-						log.Printf("Counter for option #%d is off: %d stored vs. %d counted", o.ID, o.Ctr, votesForOption[o.ID])
+						klog.Infof("Counter for option #%d is off: %d stored vs. %d counted", o.ID, o.Ctr, votesForOption[o.ID])
 					}
 				}
 				part += ")"
@@ -253,7 +229,6 @@ func buildEditMarkup(p *poll, noOlder, noNewer bool) *tg.InlineKeyboardMarkup {
 	buttonrows[4] = append(buttonrows[4], buttonShare, buttonNew)
 
 	markup := tg.NewInlineKeyboardMarkup(buttonrows...)
-
 	return &markup
 }
 
