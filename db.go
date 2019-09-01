@@ -494,24 +494,22 @@ func (st *sqlStore) SaveOptions(options []option) error {
 		}
 		err = tx.Commit()
 	}()
-	stmt, err := tx.Prepare("INSERT OR REPLACE INTO option(PollID, Ctr, Text) values(?, ?, ?)")
+	stmt, err := tx.Prepare("INSERT OR REPLACE INTO option(ID, PollID, Ctr, Text) values(?, ?, ?, ?)")
 	if err != nil {
 		return fmt.Errorf("could not prepare insert sql statement for options: %v", err)
 	}
 	defer close(stmt)
 
-	var res sql.Result
-	var id64 int64
 	for i := 0; i < len(options); i++ {
-		res, err = stmt.Exec(options[i].PollID, options[i].Ctr, options[i].Text)
+		id64, err := st.db.GetGkey()
+		if err != nil {
+			return fmt.Errorf("could not get gkey for option: %v", err)
+		}
+		options[i].ID = int(id64)
+		_, err = stmt.Exec(options[i].ID, options[i].PollID, options[i].Ctr, options[i].Text)
 		if err != nil {
 			return fmt.Errorf("could not insert option into sql database: %v", err)
 		}
-		id64, err = res.LastInsertId()
-		if err != nil {
-			return fmt.Errorf("could not get id of last insert: %v", err)
-		}
-		options[i].ID = int(id64)
 	}
 	return nil
 }
@@ -597,23 +595,22 @@ func (st *sqlStore) SavePoll(p *poll) (id int, err error) {
 		return id, nil
 	}
 
-	stmt, err := tx.Prepare("INSERT INTO poll(UserID, Question, Inactive, Private, Type, DisplayPercent, LastSaved, CreatedAt) values(?, ?, ?, ?, ?, ?, ?, ?)")
+	id64, err := st.db.GetGkey()
+	if err != nil {
+		return id, fmt.Errorf("could not get poll gkey id: %v", err)
+	}
+	id = int(id64)
+
+	stmt, err := tx.Prepare("INSERT INTO poll(ID, UserID, Question, Inactive, Private, Type, DisplayPercent, LastSaved, CreatedAt) values(?, ?, ?, ?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		return id, fmt.Errorf("could not prepare sql insert statement: %v", err)
 	}
 	defer close(stmt)
 
-	var res sql.Result
-	res, err = stmt.Exec(p.UserID, p.Question, p.Inactive, p.Private, p.Type, p.DisplayPercent, time.Now().UTC().Unix(), time.Now().UTC().Unix())
+	_, err = stmt.Exec(id, p.UserID, p.Question, p.Inactive, p.Private, p.Type, p.DisplayPercent, time.Now().UTC().Unix(), time.Now().UTC().Unix())
 	if err != nil {
 		return id, fmt.Errorf("could not execute sql insert statement: %v", err)
 	}
-
-	id64, err := res.LastInsertId()
-	if err != nil {
-		return id, fmt.Errorf("could not get id of last insert: %v", err)
-	}
-	id = int(id64)
 
 	return id, nil
 }
