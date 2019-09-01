@@ -27,6 +27,7 @@ func main() {
 	}
 
 	klog.Info("Connecting...")
+	tg.SetLogger(&klogAdapter{})
 	bot, err := tg.NewBotAPI(*token)
 	if err != nil {
 		klog.Fatal(fmt.Fprintf(os.Stderr, "Could not connect to bot: %v\n", err))

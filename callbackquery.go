@@ -318,7 +318,7 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 			p, err = st.GetPollNewer(pollid, update.CallbackQuery.From.ID)
 			if err != nil {
 				klog.Infof("could not get older poll: %v\n", err)
-				err = st.SaveState(update.Message.From.ID, -1, ohHi)
+				err = st.SaveState(update.CallbackQuery.From.ID, -1, ohHi)
 				if err != nil {
 					return fmt.Errorf("could not save state: %v", err)
 				}

@@ -36,7 +36,15 @@ func sendMainMenuMessage(bot *tg.BotAPI, update tg.Update) (tg.Message, error) {
 	buttons = append(buttons, tg.NewInlineKeyboardButtonData("create poll", qryCreatePoll))
 	markup := tg.NewInlineKeyboardMarkup(buttons)
 	messageTxt := locMainMenu
-	msg := tg.NewMessage(int64(update.Message.From.ID), messageTxt)
+	var userID int64
+	if nil != update.Message {
+		userID = int64(update.Message.From.ID)
+	} else if nil != update.CallbackQuery {
+		userID = int64(update.CallbackQuery.From.ID)
+	} else {
+		return tg.Message{}, fmt.Errorf("invalid update info: no valid user ID found")
+	}
+	msg := tg.NewMessage(userID, messageTxt)
 	msg.ReplyMarkup = markup
 	return bot.Send(msg)
 }
