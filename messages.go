@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"html"
-	"strconv"
 
 	"github.com/kyokomi/emoji"
 	"github.com/semog/gocommon"
@@ -11,45 +10,34 @@ import (
 	"k8s.io/klog"
 )
 
-func postPoll(bot *tg.BotAPI, p *poll, chatid int64) (tg.Message, error) {
-	share := tg.InlineKeyboardButton{
-		Text:              locSharePoll,
-		SwitchInlineQuery: &p.Question,
+func getUpdateUserID(update tg.Update) (int, error) {
+	if update.Message != nil {
+		return update.Message.From.ID, nil
 	}
-	new := tg.NewInlineKeyboardButtonData(locCreateNewPoll, qryCreatePoll)
-
-	buttons := tg.NewInlineKeyboardRow(share, new)
-	markup := tg.NewInlineKeyboardMarkup(buttons)
-	messageTxt := locFinishedCreatingPoll
-	messageTxt += p.Question + "\n" + lineSep + "\n"
-
-	for i, o := range p.Options {
-		messageTxt += strconv.Itoa(i+1) + ". " + o.Text + "\n"
+	if update.CallbackQuery != nil {
+		return update.CallbackQuery.From.ID, nil
 	}
-	msg := tg.NewMessage(chatid, messageTxt)
-	msg.ReplyMarkup = markup
-	return bot.Send(msg)
+	return 0, fmt.Errorf("invalid update info: no valid user ID found")
 }
 
 func sendMainMenuMessage(bot *tg.BotAPI, update tg.Update) (tg.Message, error) {
+	userID, err := getUpdateUserID(update)
+	if err != nil {
+		return tg.Message{}, err
+	}
 	buttons := make([]tg.InlineKeyboardButton, 0)
 	buttons = append(buttons, tg.NewInlineKeyboardButtonData("create poll", qryCreatePoll))
 	markup := tg.NewInlineKeyboardMarkup(buttons)
-	messageTxt := locMainMenu
-	var userID int64
-	if nil != update.Message {
-		userID = int64(update.Message.From.ID)
-	} else if nil != update.CallbackQuery {
-		userID = int64(update.CallbackQuery.From.ID)
-	} else {
-		return tg.Message{}, fmt.Errorf("invalid update info: no valid user ID found")
-	}
-	msg := tg.NewMessage(userID, messageTxt)
+	msg := tg.NewMessage(int64(userID), locMainMenu)
 	msg.ReplyMarkup = markup
 	return bot.Send(msg)
 }
 
 func sendInterMessage(bot *tg.BotAPI, update tg.Update, p *poll) (tg.Message, error) {
+	userID, err := getUpdateUserID(update)
+	if err != nil {
+		return tg.Message{}, err
+	}
 	//shareButton := tg.InlineKeyboardButton{
 	//Text:              locSharePoll,
 	//SwitchInlineQuery: &p.Question,
@@ -63,42 +51,47 @@ func sendInterMessage(bot *tg.BotAPI, update tg.Update, p *poll) (tg.Message, er
 
 	markup := tg.NewInlineKeyboardMarkup(buttons)
 	messageTxt := locAddedOption
-	messageTxt += p.Question + "\n" + lineSep + "\n"
-
-	for i, o := range p.Options {
-		messageTxt += strconv.Itoa(i+1) + ". " + o.Text + "\n"
-	}
-	msg := tg.NewMessage(int64(update.Message.From.ID), messageTxt)
+	messageTxt += getFormattedPreviewPoll(p)
+	msg := tg.NewMessage(int64(userID), messageTxt)
+	msg.ParseMode = tg.ModeHTML
 	msg.ReplyMarkup = markup
 	return bot.Send(msg)
 }
 
 func sendNewQuestionMessage(bot *tg.BotAPI, update tg.Update, st Store) error {
-	msg := tg.NewMessage(int64(update.CallbackQuery.From.ID), locNewQuestion)
-	_, err := bot.Send(&msg)
+	userID, err := getUpdateUserID(update)
+	if err != nil {
+		return err
+	}
+	msg := tg.NewMessage(int64(userID), locNewQuestion)
+	_, err = bot.Send(&msg)
 	if err != nil {
 		return fmt.Errorf("could not send message: %v", err)
 	}
 
-	err = st.SaveState(update.CallbackQuery.From.ID, -1, waitingForQuestion)
+	err = st.SaveState(userID, -1, waitingForQuestion)
 	if err != nil {
 		return fmt.Errorf("could not change state to waiting for questions: %v", err)
 	}
 	return nil
 }
 
-func sendEditMessage(bot *tg.BotAPI, update tg.Update, p *poll) (tg.Message, error) {
-	body := "Currently selected Poll:\n<pre>\n"
-	body += p.Question + "\n" + lineSep + "\n"
+func sendEditMessage(bot *tg.BotAPI, chatID int64, p *poll) (tg.Message, error) {
+	messageTxt := locCurrentlySelectedPoll
+	messageTxt += getFormattedPreviewPoll(p)
+	msg := tg.NewMessage(chatID, messageTxt)
+	msg.ParseMode = tg.ModeHTML
+	msg.ReplyMarkup = buildEditMarkup(p, false, false)
+	return bot.Send(&msg)
+}
+
+func getFormattedPreviewPoll(p *poll) string {
+	body := fmt.Sprintf("<pre>\n%s\n%s\n", p.Question, lineSep)
 	for i, o := range p.Options {
 		body += fmt.Sprintf("%d. %s", i+1, o.Text) + "\n"
 	}
 	body += "</pre>\n\n"
-	msg := tg.NewMessage(int64(update.Message.From.ID), body)
-	msg.ParseMode = tg.ModeHTML
-
-	msg.ReplyMarkup = buildEditMarkup(p, false, false)
-	return bot.Send(&msg)
+	return body
 }
 
 func buildPollMarkup(p *poll) *tg.InlineKeyboardMarkup {

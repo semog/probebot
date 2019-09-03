@@ -50,7 +50,7 @@ func handleInlineQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 func handleInlineQueryAdmin(bot *tg.BotAPI, update tg.Update, st Store) error {
 	splits := strings.Split(update.InlineQuery.Query, ":")
 	if len(splits) < 1 {
-		return fmt.Errorf("Could not convert query to pollid")
+		return fmt.Errorf("Could not convert query to pollID")
 	}
 	active := false
 	if len(splits) == 2 {
@@ -59,11 +59,11 @@ func handleInlineQueryAdmin(bot *tg.BotAPI, update tg.Update, st Store) error {
 		}
 	}
 
-	pollid, err := strconv.Atoi(splits[0])
+	pollID, err := strconv.Atoi(splits[0])
 	if err != nil {
-		return fmt.Errorf("Could not convert query to pollid: %v", err)
+		return fmt.Errorf("Could not convert query to pollID: %v", err)
 	}
-	p, err := st.GetPoll(pollid)
+	p, err := st.GetPoll(pollID)
 	if err != nil {
 		return fmt.Errorf("could not get polls for user: %v", err)
 	}

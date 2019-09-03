@@ -83,19 +83,17 @@ func newTimer() func() {
 func run(bot *tg.BotAPI) error {
 	// fill update channel with constant rate
 	go func() {
-		var pollid int
 		for {
 			time.Sleep(400 * time.Millisecond)
-			pollid = pollsToUpdate.dequeue()
-			pollsToUpdateConstRate <- pollid
+			pollID := pollsToUpdate.dequeue()
+			pollsToUpdateConstRate <- pollID
 		}
 	}()
 	go func() {
-		var pollid int
 		for {
 			time.Sleep(400 * time.Millisecond)
-			pollid = pollsToDelete.dequeue()
-			pollsToDeleteConstRate <- pollid
+			pollID := pollsToDelete.dequeue()
+			pollsToDeleteConstRate <- pollID
 		}
 	}()
 
@@ -114,15 +112,15 @@ func run(bot *tg.BotAPI) error {
 
 	for {
 		select {
-		case pollid := <-pollsToUpdateConstRate:
-			err := updatePollMessages(bot, pollid, st)
+		case pollID := <-pollsToUpdateConstRate:
+			err := updatePollMessages(bot, pollID, st)
 			if err != nil {
-				klog.Infof("Could not update poll #%d: %v", pollid, err)
+				klog.Infof("Could not update poll #%d: %v", pollID, err)
 			}
-		case pollid := <-pollsToDeleteConstRate:
-			err := deletePollMessages(bot, pollid, st)
+		case pollID := <-pollsToDeleteConstRate:
+			err := deletePollMessages(bot, pollID, st)
 			if err != nil {
-				klog.Infof("Could not delete poll #%d messages: %v", pollid, err)
+				klog.Infof("Could not delete poll #%d messages: %v", pollID, err)
 			}
 		case update := <-updates:
 			stopTimer := newTimer()
@@ -155,11 +153,11 @@ func run(bot *tg.BotAPI) error {
 
 			// poll was inserted into a chat
 			if update.ChosenInlineResult != nil {
-				pollid, err := strconv.Atoi(update.ChosenInlineResult.ResultID)
+				pollID, err := strconv.Atoi(update.ChosenInlineResult.ResultID)
 				if err != nil {
 					return fmt.Errorf("could not parse pollID: %v", err)
 				}
-				err = st.AddInlineMsgToPoll(pollid, update.ChosenInlineResult.InlineMessageID)
+				err = st.AddInlineMsgToPoll(pollID, update.ChosenInlineResult.InlineMessageID)
 				if err != nil {
 					return fmt.Errorf("could not add inline message to poll: %v", err)
 				}

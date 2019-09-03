@@ -35,18 +35,18 @@ func handleCallbackQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 		return handlePollDoneQuery(bot, update, st)
 	}
 
-	pollid, optionid, err := parseQueryPayload(update)
+	pollID, optionid, err := parseQueryPayload(update)
 	if err != nil {
 		return fmt.Errorf("could not parse query payload: %v", err)
 	}
 
 	if update.CallbackQuery.InlineMessageID != "" {
-		if err := st.AddInlineMsgToPoll(pollid, update.CallbackQuery.InlineMessageID); err != nil {
+		if err := st.AddInlineMsgToPoll(pollID, update.CallbackQuery.InlineMessageID); err != nil {
 			return fmt.Errorf("could not add inline message to poll: %v", err)
 		}
 	}
 
-	p, err := st.GetPoll(pollid)
+	p, err := st.GetPoll(pollID)
 	if err != nil {
 		return fmt.Errorf("could not get poll: %v", err)
 	}
@@ -58,12 +58,12 @@ func handleCallbackQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 		if err != nil {
 			return fmt.Errorf("could not send answer to callback query: %v", err)
 		}
-		return fmt.Errorf("poll %d is inactive", pollid)
+		return fmt.Errorf("poll %d is inactive", pollID)
 	}
 
 	newAnswer := answer{
 		UserID:   update.CallbackQuery.From.ID,
-		PollID:   pollid,
+		PollID:   pollID,
 		OptionID: optionid,
 	}
 	unvoted, err := st.SaveAnswer(p, newAnswer)
@@ -71,7 +71,7 @@ func handleCallbackQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 		return fmt.Errorf("could not save answers: %v", err)
 	}
 	// polls were changed
-	p, err = st.GetPoll(pollid)
+	p, err = st.GetPoll(pollID)
 	if err != nil {
 		return fmt.Errorf("could not get poll: %v", err)
 	}
@@ -103,13 +103,13 @@ func handleCallbackQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 	return nil
 }
 
-func updatePollMessages(bot *tg.BotAPI, pollid int, st Store) error {
-	p, err := st.GetPoll(pollid)
+func updatePollMessages(bot *tg.BotAPI, pollID int, st Store) error {
+	p, err := st.GetPoll(pollID)
 	if err != nil {
 		return fmt.Errorf("could not get poll: %v", err)
 	}
 
-	//msgs, err := st.GetAllPollMsg(pollid)
+	//msgs, err := st.GetAllPollMsg(pollID)
 	//if err != nil {
 	//return fmt.Errorf("could not get all pollmsgs: %v", err)
 	//}
@@ -199,7 +199,7 @@ func updatePollMessages(bot *tg.BotAPI, pollid int, st Store) error {
 	return nil
 }
 
-func deletePollMessages(bot *tg.BotAPI, pollid int, st Store) error {
+func deletePollMessages(bot *tg.BotAPI, pollID int, st Store) error {
 	klog.Infof("TODO: delete existing shared poll messages.")
 	return nil
 }
@@ -207,20 +207,20 @@ func deletePollMessages(bot *tg.BotAPI, pollid int, st Store) error {
 func handlePollDoneQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 	splits := strings.Split(update.CallbackQuery.Data, ":")
 	if len(splits) < 2 {
-		return fmt.Errorf("query did not contain the pollid")
+		return fmt.Errorf("query did not contain the pollID")
 	}
-	pollid, err := strconv.Atoi(splits[1])
+	pollID, err := strconv.Atoi(splits[1])
 	if err != nil {
 		return fmt.Errorf("could not convert string payload to int: %v", err)
 	}
 
-	p, err := st.GetPoll(pollid)
+	p, err := st.GetPoll(pollID)
 	if err != nil {
 		return fmt.Errorf("could not get poll: %v", err)
 	}
-	_, err = postPoll(bot, p, int64(update.CallbackQuery.From.ID))
+	_, err = sendEditMessage(bot, int64(update.CallbackQuery.From.ID), p)
 	if err != nil {
-		return fmt.Errorf("could not post finished poll: %v", err)
+		return fmt.Errorf("could not edit finished poll: %v", err)
 	}
 	err = st.SaveState(update.CallbackQuery.From.ID, p.ID, pollDone)
 	if err != nil {
@@ -235,7 +235,7 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 		klog.Infoln(splits)
 		return fmt.Errorf("query wrongly formatted")
 	}
-	pollid, err := strconv.Atoi(splits[1])
+	pollID, err := strconv.Atoi(splits[1])
 	if err != nil {
 		return fmt.Errorf("could not convert string payload to int: %v", err)
 	}
@@ -248,38 +248,38 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 	toggleShowVotePct := false
 	switch splits[2] {
 	case qryNextPoll:
-		p, err = st.GetPollNewer(pollid, update.CallbackQuery.From.ID)
+		p, err = st.GetPollNewer(pollID, update.CallbackQuery.From.ID)
 		if err != nil {
 			klog.Infof("could not get older poll: %v\n", err)
 			noNewer = true
 		}
 	case qryPrevPoll:
-		p, err = st.GetPollOlder(pollid, update.CallbackQuery.From.ID)
+		p, err = st.GetPollOlder(pollID, update.CallbackQuery.From.ID)
 		if err != nil {
 			klog.Infof("could not get older poll: %v\n", err)
 			noOlder = true
 		}
 	case qryToggleActive:
-		p, err = st.GetPoll(pollid)
+		p, err = st.GetPoll(pollID)
 		if err != nil {
 			klog.Infof("could not get poll: %v\n", err)
 		}
 		toggleInactive = true
 	case qryToggleMultipleChoice:
-		p, err = st.GetPoll(pollid)
+		p, err = st.GetPoll(pollID)
 		if err != nil {
 			klog.Infof("could not get poll: %v\n", err)
 		}
 		toggleMultipleChoice = true
 	case qryToggleShowVotePct:
-		p, err = st.GetPoll(pollid)
+		p, err = st.GetPoll(pollID)
 		if err != nil {
 			klog.Infof("could not get poll: %v\n", err)
 		}
 		toggleShowVotePct = true
 	case qryAddOptions:
 		state := waitingForOption
-		err = st.SaveState(update.CallbackQuery.From.ID, pollid, state)
+		err = st.SaveState(update.CallbackQuery.From.ID, pollID, state)
 		if err != nil {
 			return fmt.Errorf("could not save state: %v", err)
 		}
@@ -292,7 +292,7 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 		return nil
 	case qryEditQuestion:
 		state := editQuestion
-		err = st.SaveState(update.CallbackQuery.From.ID, pollid, state)
+		err = st.SaveState(update.CallbackQuery.From.ID, pollID, state)
 		if err != nil {
 			return fmt.Errorf("could not save state: %v", err)
 		}
@@ -304,18 +304,18 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 		}
 		return nil
 	case qryDeletePoll:
-		err = st.DeletePoll(update.CallbackQuery.From.ID, pollid)
+		err = st.DeletePoll(update.CallbackQuery.From.ID, pollID)
 		if err != nil {
 			return fmt.Errorf("could not save state: %v", err)
 		}
-		pollsToDelete.enqueue(pollid)
+		pollsToDelete.enqueue(pollID)
 		// Move to the next poll.
-		p, err = st.GetPollOlder(pollid, update.CallbackQuery.From.ID)
+		p, err = st.GetPollOlder(pollID, update.CallbackQuery.From.ID)
 		if err != nil {
 			klog.Infof("could not get older poll: %v\n", err)
 			noOlder = true
 			// Move to the previous poll.
-			p, err = st.GetPollNewer(pollid, update.CallbackQuery.From.ID)
+			p, err = st.GetPollNewer(pollID, update.CallbackQuery.From.ID)
 			if err != nil {
 				klog.Infof("could not get older poll: %v\n", err)
 				err = st.SaveState(update.CallbackQuery.From.ID, -1, ohHi)
@@ -334,13 +334,13 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 	}
 
 	if err != nil {
-		p, err = st.GetPoll(pollid)
+		p, err = st.GetPoll(pollID)
 		if err != nil {
 			return fmt.Errorf("could not get poll by poll id: %v", err)
 		}
 	}
 
-	// danger! malicious client could send pollid from another user in query
+	// danger! malicious client could send pollID from another user in query
 	if p.UserID != update.CallbackQuery.From.ID {
 		return fmt.Errorf("user does not own poll: %v", err)
 	}
@@ -404,19 +404,19 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 	return nil
 }
 
-func parseQueryPayload(update tg.Update) (pollid int, optionid int, err error) {
+func parseQueryPayload(update tg.Update) (pollID int, optionid int, err error) {
 	dataSplit := strings.Split(update.CallbackQuery.Data, ":")
 	if len(dataSplit) != 2 {
-		return pollid, optionid, fmt.Errorf("could not parse response")
+		return pollID, optionid, fmt.Errorf("could not parse response")
 	}
-	pollid, err = strconv.Atoi(dataSplit[0])
+	pollID, err = strconv.Atoi(dataSplit[0])
 	if err != nil {
-		return pollid, optionid, fmt.Errorf("could not convert CallbackQuery data pollid to int: %v", err)
+		return pollID, optionid, fmt.Errorf("could not convert CallbackQuery data pollID to int: %v", err)
 	}
 
 	optionid, err = strconv.Atoi(dataSplit[1])
 	if err != nil {
-		return pollid, optionid, fmt.Errorf("could not convert CallbackQuery data OptionID to int: %v", err)
+		return pollID, optionid, fmt.Errorf("could not convert CallbackQuery data OptionID to int: %v", err)
 	}
-	return pollid, optionid, nil
+	return pollID, optionid, nil
 }

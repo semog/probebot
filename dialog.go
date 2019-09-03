@@ -10,11 +10,14 @@ import (
 
 func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 	state := ohHi
-	pollid := -1
-	var err error
+	pollID := -1
+	userID, err := getUpdateUserID(update)
+	if err != nil {
+		return err
+	}
 
 	if strings.Contains(update.Message.Text, locAboutCommand) {
-		msg := tg.NewMessage(int64(update.Message.From.ID), locAboutMessage)
+		msg := tg.NewMessage(int64(userID), locAboutMessage)
 		_, err = bot.Send(&msg)
 		if err != nil {
 			return fmt.Errorf("could not send message: %v", err)
@@ -22,7 +25,7 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 		return err
 	}
 
-	state, pollid, err = st.GetState(update.Message.From.ID)
+	state, pollID, err = st.GetState(userID)
 	if err != nil {
 		// could not retrieve state -> state is zero
 		state = ohHi
@@ -30,34 +33,39 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 	}
 
 	if strings.Contains(update.Message.Text, locEditCommand) {
-		polls, err := st.GetPollsByUser(update.Message.From.ID)
+		polls, err := st.GetPollsByUser(userID)
 		if err != nil || len(polls) == 0 {
-			klog.Infof("could not get polls of user with userid %d: %v", update.Message.From.ID, err)
+			klog.Infof("could not get polls of user with userID %d: %v", userID, err)
+			state = ohHi
+			err = st.SaveState(userID, pollID, state)
+			if err != nil {
+				return fmt.Errorf("could not save state: %v", err)
+			}
 			msg := tg.NewMessage(int64(update.Message.From.ID), locNoMessageToEdit)
 			_, err = bot.Send(&msg)
 			if err != nil {
 				return fmt.Errorf("could not send message: %v", err)
 			}
-			return fmt.Errorf("could not find message to edit: %v", err)
-		}
+		} else {
 
-		var p *poll
-		for _, p = range polls {
-			if p.ID == pollid {
-				break
+			var p *poll
+			for _, p = range polls {
+				if p.ID == pollID {
+					break
+				}
 			}
-		}
 
-		_, err = sendEditMessage(bot, update, p)
-		if err != nil {
-			return fmt.Errorf("could not send edit message: %v", err)
+			_, err = sendEditMessage(bot, int64(userID), p)
+			if err != nil {
+				return fmt.Errorf("could not send edit message: %v", err)
+			}
+			return nil
 		}
-		return nil
 	}
 
-	if strings.Contains(update.Message.Text, "/start") || pollid < 0 && state != waitingForQuestion {
+	if strings.Contains(update.Message.Text, "/start") || pollID < 0 && state != waitingForQuestion {
 		state = ohHi
-		err = st.SaveState(update.Message.From.ID, pollid, state)
+		err = st.SaveState(userID, pollID, state)
 		if err != nil {
 			return fmt.Errorf("could not save state: %v", err)
 		}
@@ -74,22 +82,22 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 	if state == waitingForQuestion {
 		p := &poll{
 			Question: update.Message.Text,
-			UserID:   update.Message.From.ID,
+			UserID:   userID,
 		}
 
-		pollid, err = st.SavePoll(p)
+		pollID, err = st.SavePoll(p)
 		if err != nil {
 			return fmt.Errorf("could not save poll: %v", err)
 		}
 
-		msg := tg.NewMessage(int64(update.Message.From.ID), locGotQuestion)
+		msg := tg.NewMessage(int64(userID), locGotQuestion)
 		_, err = bot.Send(&msg)
 		if err != nil {
 			return fmt.Errorf("could not send message: %v", err)
 		}
 
 		state = waitingForOption
-		err = st.SaveState(update.Message.From.ID, pollid, state)
+		err = st.SaveState(userID, pollID, state)
 		if err != nil {
 			return fmt.Errorf("could not save state: %v", err)
 		}
@@ -98,7 +106,7 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 	}
 
 	if state == editQuestion {
-		p, err := st.GetPoll(pollid)
+		p, err := st.GetPoll(pollID)
 		if err != nil {
 			return fmt.Errorf("could not get poll: %v", err)
 		}
@@ -111,7 +119,7 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 		}
 
 		msg := tg.NewMessage(
-			int64(update.Message.From.ID),
+			int64(userID),
 			fmt.Sprintf(locGotEditQuestion, p.Question))
 		_, err = bot.Send(&msg)
 		if err != nil {
@@ -119,7 +127,7 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 		}
 
 		state = editPoll
-		err = st.SaveState(update.Message.From.ID, pollid, state)
+		err = st.SaveState(userID, pollID, state)
 		if err != nil {
 			return fmt.Errorf("could not save state: %v", err)
 		}
@@ -127,25 +135,12 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 	}
 
 	if state == editPoll {
-		p, err := st.GetPoll(pollid)
+		p, err := st.GetPoll(pollID)
 		if err != nil {
 			return fmt.Errorf("could not get poll: %v", err)
 		}
 
-		body := "Currently selected Poll:\n<pre>\n"
-		body += p.Question + "\n" + lineSep + "\n"
-		for i, o := range p.Options {
-			body += fmt.Sprintf("%d. %s", i+1, o.Text) + "\n"
-		}
-		body += "</pre>\n\n"
-
-		msg := tg.NewMessage(
-			update.Message.Chat.ID,
-			body)
-		msg.ParseMode = tg.ModeHTML
-		msg.ReplyMarkup = buildEditMarkup(p, false, false)
-
-		_, err = bot.Send(msg)
+		_, err = sendEditMessage(bot, int64(update.Message.Chat.ID), p)
 		if err != nil {
 			return fmt.Errorf("could not send message: %v", err)
 		}
@@ -154,7 +149,7 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 	if state == waitingForOption {
 		opts := []option{
 			option{
-				PollID: pollid,
+				PollID: pollID,
 				Text:   update.Message.Text,
 			}}
 
@@ -162,7 +157,7 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 		if err != nil {
 			return fmt.Errorf("could not save option: %v", err)
 		}
-		p, err := st.GetPoll(pollid)
+		p, err := st.GetPoll(pollID)
 		if err != nil {
 			return fmt.Errorf("could not get poll: %v", err)
 		}
@@ -175,12 +170,12 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 	}
 
 	if state == pollDone {
-		p, err := st.GetPoll(pollid)
+		p, err := st.GetPoll(pollID)
 		if err != nil {
 			return fmt.Errorf("could not get poll: %v", err)
 		}
 
-		_, err = postPoll(bot, p, int64(update.Message.From.ID))
+		_, err = sendEditMessage(bot, int64(userID), p)
 		if err != nil {
 			return fmt.Errorf("could not post poll: %v", err)
 		}

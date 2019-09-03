@@ -41,10 +41,10 @@ func newSQLStore(databaseFile string) *sqlStore {
 	return st
 }
 
-func (st *sqlStore) GetUser(userid int) (*tg.User, error) {
-	u := &tg.User{ID: userid}
+func (st *sqlStore) GetUser(userID int) (*tg.User, error) {
+	u := &tg.User{ID: userID}
 
-	row := st.db.QueryRow("SELECT FirstName, LastName, UserName FROM user WHERE ID = ?", userid)
+	row := st.db.QueryRow("SELECT FirstName, LastName, UserName FROM user WHERE ID = ?", userID)
 	if err := row.Scan(&u.FirstName, &u.LastName, &u.UserName); err != nil {
 		return u, fmt.Errorf(`could not scan user "%d": %v`, u.ID, err)
 	}
@@ -52,10 +52,10 @@ func (st *sqlStore) GetUser(userid int) (*tg.User, error) {
 	return u, nil
 }
 
-func (st *sqlStore) GetPoll(pollid int) (*poll, error) {
-	p := &poll{ID: pollid}
+func (st *sqlStore) GetPoll(pollID int) (*poll, error) {
+	p := &poll{ID: pollID}
 	var err error
-	row := st.db.QueryRow("SELECT UserID, Question, Inactive, Type, DisplayPercent FROM poll WHERE ID = ?", pollid)
+	row := st.db.QueryRow("SELECT UserID, Question, Inactive, Type, DisplayPercent FROM poll WHERE ID = ?", pollID)
 	if err := row.Scan(&p.UserID, &p.Question, &p.Inactive, &p.Type, &p.DisplayPercent); err != nil {
 		return p, fmt.Errorf("could not scan poll #%d: %v", p.ID, err)
 	}
@@ -73,10 +73,10 @@ func (st *sqlStore) GetPoll(pollid int) (*poll, error) {
 	return p, nil
 }
 
-func (st *sqlStore) GetPollNewer(pollid int, userid int) (*poll, error) {
+func (st *sqlStore) GetPollNewer(pollID int, userID int) (*poll, error) {
 	p := &poll{}
 	var err error
-	row := st.db.QueryRow("SELECT UserID, ID, Question, Inactive, Type, DisplayPercent FROM poll WHERE ID > ? AND UserID = ? ORDER BY ID ASC LIMIT 1", pollid, userid)
+	row := st.db.QueryRow("SELECT UserID, ID, Question, Inactive, Type, DisplayPercent FROM poll WHERE ID > ? AND UserID = ? ORDER BY ID ASC LIMIT 1", pollID, userID)
 	if err := row.Scan(&p.UserID, &p.ID, &p.Question, &p.Inactive, &p.Type, &p.DisplayPercent); err != nil {
 		return p, fmt.Errorf("could not scan poll #%d: %v", p.ID, err)
 	}
@@ -94,10 +94,10 @@ func (st *sqlStore) GetPollNewer(pollid int, userid int) (*poll, error) {
 	return p, nil
 }
 
-func (st *sqlStore) GetPollOlder(pollid int, userid int) (*poll, error) {
+func (st *sqlStore) GetPollOlder(pollID int, userID int) (*poll, error) {
 	p := &poll{}
 	var err error
-	row := st.db.QueryRow("SELECT UserID, ID, Question, Inactive, Type, DisplayPercent FROM poll WHERE ID < ? AND UserID = ? ORDER BY ID DESC LIMIT 1", pollid, userid)
+	row := st.db.QueryRow("SELECT UserID, ID, Question, Inactive, Type, DisplayPercent FROM poll WHERE ID < ? AND UserID = ? ORDER BY ID DESC LIMIT 1", pollID, userID)
 	if err := row.Scan(&p.UserID, &p.ID, &p.Question, &p.Inactive, &p.Type, &p.DisplayPercent); err != nil {
 		return p, fmt.Errorf("could not scan poll #%d: %v", p.ID, err)
 	}
@@ -115,22 +115,22 @@ func (st *sqlStore) GetPollOlder(pollid int, userid int) (*poll, error) {
 	return p, nil
 }
 
-func (st *sqlStore) GetState(userid int) (state int, pollid int, err error) {
-	row := st.db.QueryRow("SELECT state, pollid FROM dialog WHERE UserID = ?", userid)
-	if err := row.Scan(&state, &pollid); err != nil {
-		return state, pollid, fmt.Errorf("could not scan state from row: %v", err)
+func (st *sqlStore) GetState(userID int) (state int, pollID int, err error) {
+	row := st.db.QueryRow("SELECT state, PollID FROM dialog WHERE UserID = ?", userID)
+	if err := row.Scan(&state, &pollID); err != nil {
+		return state, pollID, fmt.Errorf("could not scan state from row: %v", err)
 	}
-	return state, pollid, nil
+	return state, pollID, nil
 }
 
-func (st *sqlStore) SaveState(userid int, pollid int, state int) (err error) {
-	res, err := st.db.ExecResults("UPDATE dialog SET state = ? WHERE UserID = ?", userid, state)
+func (st *sqlStore) SaveState(userID int, pollID int, state int) (err error) {
+	res, err := st.db.ExecResults("UPDATE dialog SET state = ? WHERE UserID = ?", userID, state)
 	if err != nil {
 		return fmt.Errorf("could not update state in database: %v", err)
 	}
 
 	if aff, err := res.RowsAffected(); aff == 0 || err != nil {
-		err = st.db.Exec("INSERT OR REPLACE INTO dialog(UserID, pollid, state) values(?, ?, ?)", userid, pollid, state)
+		err = st.db.Exec("INSERT OR REPLACE INTO dialog(UserID, PollID, state) values(?, ?, ?)", userID, pollID, state)
 		if err != nil {
 			return fmt.Errorf("could not insert or replace state database entry: %v", err)
 		}
@@ -139,19 +139,19 @@ func (st *sqlStore) SaveState(userid int, pollid int, state int) (err error) {
 	return nil
 }
 
-func (st *sqlStore) GetPollsByUser(userid int) ([]*poll, error) {
+func (st *sqlStore) GetPollsByUser(userID int) ([]*poll, error) {
 	polls := make([]*poll, 0)
 	var err error
 
-	row, err := st.db.Query("SELECT ID, UserID, Question, Inactive, Type, DisplayPercent FROM poll WHERE UserID = ? ORDER BY ID DESC LIMIT 3", userid)
+	row, err := st.db.Query("SELECT ID, UserID, Question, Inactive, Type, DisplayPercent FROM poll WHERE UserID = ? ORDER BY ID DESC LIMIT 3", userID)
 	if err != nil {
-		return polls, fmt.Errorf("could not query polls for userid #%d: %v", userid, err)
+		return polls, fmt.Errorf("could not query polls for userID #%d: %v", userID, err)
 	}
 
 	for row.Next() {
-		p := &poll{UserID: userid}
+		p := &poll{UserID: userID}
 		if err := row.Scan(&p.ID, &p.UserID, &p.Question, &p.Inactive, &p.Type, &p.DisplayPercent); err != nil {
-			return polls, fmt.Errorf("could not scan poll for userid #%d: %v", userid, err)
+			return polls, fmt.Errorf("could not scan poll for userID #%d: %v", userID, err)
 		}
 		p.Options, err = st.GetOptions(p.ID)
 		if err != nil {
@@ -168,21 +168,21 @@ func (st *sqlStore) GetPollsByUser(userid int) ([]*poll, error) {
 	return polls, nil
 }
 
-func (st *sqlStore) GetPollID(messageid int) (int, error) {
-	var pollid int
+func (st *sqlStore) GetPollID(messageID int) (int, error) {
+	var pollID int
 
-	rows, err := st.db.Query("SELECT PollID FROM pollmsg WHERE MessageID = ?", messageid)
+	rows, err := st.db.Query("SELECT PollID FROM pollmsg WHERE MessageID = ?", messageID)
 	if err != nil {
-		return pollid, fmt.Errorf("could not query pollid: %v", err)
+		return pollID, fmt.Errorf("could not query pollID: %v", err)
 	}
 	defer close(rows)
 	for rows.Next() {
-		err = rows.Scan(&pollid)
+		err = rows.Scan(&pollID)
 		if err != nil {
-			return pollid, fmt.Errorf("could not scan pollid: %v", err)
+			return pollID, fmt.Errorf("could not scan pollID: %v", err)
 		}
 	}
-	return pollid, nil
+	return pollID, nil
 }
 
 type pollident struct {
@@ -191,10 +191,10 @@ type pollident struct {
 	ChatID          int64
 }
 
-func (st *sqlStore) GetAllPollMsg(pollid int) ([]pollident, error) {
+func (st *sqlStore) GetAllPollMsg(pollID int) ([]pollident, error) {
 	msgs := make([]pollident, 0)
 
-	rows, err := st.db.Query("SELECT MessageID, ChatID FROM pollmsg WHERE PollID = ?", pollid)
+	rows, err := st.db.Query("SELECT MessageID, ChatID FROM pollmsg WHERE PollID = ?", pollID)
 	if err != nil {
 		return msgs, fmt.Errorf("could not query pollmsgs: %v", err)
 	}
@@ -210,10 +210,10 @@ func (st *sqlStore) GetAllPollMsg(pollid int) ([]pollident, error) {
 	return msgs, nil
 }
 
-func (st *sqlStore) GetAllPollInlineMsg(pollid int) ([]pollident, error) {
+func (st *sqlStore) GetAllPollInlineMsg(pollID int) ([]pollident, error) {
 	msgs := make([]pollident, 0)
 
-	rows, err := st.db.Query("SELECT InlineMessageID FROM pollinlinemsg WHERE PollID = ?", pollid)
+	rows, err := st.db.Query("SELECT InlineMessageID FROM pollinlinemsg WHERE PollID = ?", pollID)
 	if err != nil {
 		return msgs, fmt.Errorf("could not query pollinlinemsg: %v", err)
 	}
@@ -222,18 +222,18 @@ func (st *sqlStore) GetAllPollInlineMsg(pollid int) ([]pollident, error) {
 	for rows.Next() {
 		err = rows.Scan(&msg.InlineMessageID)
 		if err != nil {
-			return msgs, fmt.Errorf("could not scan pollid: %v", err)
+			return msgs, fmt.Errorf("could not scan pollID: %v", err)
 		}
 		msgs = append(msgs, msg)
 	}
 	return msgs, nil
 }
 
-func (st *sqlStore) GetOptions(pollid int) ([]option, error) {
+func (st *sqlStore) GetOptions(pollID int) ([]option, error) {
 
 	options := make([]option, 0)
 
-	rows, err := st.db.Query("SELECT Ctr, PollID, ID, Text FROM option WHERE PollID = ?", pollid)
+	rows, err := st.db.Query("SELECT Ctr, PollID, ID, Text FROM option WHERE PollID = ?", pollID)
 	if err != nil {
 		return options, fmt.Errorf("could not query options: %v", err)
 	}
@@ -249,10 +249,10 @@ func (st *sqlStore) GetOptions(pollid int) ([]option, error) {
 	return options, nil
 }
 
-func (st *sqlStore) GetAnswers(pollid int) ([]answer, error) {
+func (st *sqlStore) GetAnswers(pollID int) ([]answer, error) {
 	answers := make([]answer, 0)
 
-	rows, err := st.db.Query("SELECT ID, PollID, OptionID, UserID FROM answer WHERE PollID = ?", pollid)
+	rows, err := st.db.Query("SELECT ID, PollID, OptionID, UserID FROM answer WHERE PollID = ?", pollID)
 	if err != nil {
 		return answers, fmt.Errorf("could not query answers: %v", err)
 	}
@@ -388,7 +388,7 @@ func (st *sqlStore) SaveAnswer(p *poll, a answer) (unvoted bool, err error) {
 	return false, nil
 }
 
-func (st *sqlStore) AddMsgToPoll(pollid int, messageid int, chatid int64) error {
+func (st *sqlStore) AddMsgToPoll(pollID int, messageID int, chatID int64) error {
 	tx, err := st.db.Begin()
 	if err != nil {
 		return fmt.Errorf("could not begin database transaction: %v", err)
@@ -409,7 +409,7 @@ func (st *sqlStore) AddMsgToPoll(pollid int, messageid int, chatid int64) error 
 	}
 	defer close(stmt)
 
-	_, err = stmt.Exec(pollid, messageid, chatid)
+	_, err = stmt.Exec(pollID, messageID, chatID)
 	if err != nil {
 		return fmt.Errorf("could not add message to poll: %v", err)
 	}
@@ -417,7 +417,7 @@ func (st *sqlStore) AddMsgToPoll(pollid int, messageid int, chatid int64) error 
 	return nil
 }
 
-func (st *sqlStore) AddInlineMsgToPoll(pollid int, inlinemessageid string) error {
+func (st *sqlStore) AddInlineMsgToPoll(pollID int, inlinemessageid string) error {
 	tx, err := st.db.Begin()
 	if err != nil {
 		return fmt.Errorf("could not begin database transaction: %v", err)
@@ -439,7 +439,7 @@ func (st *sqlStore) AddInlineMsgToPoll(pollid int, inlinemessageid string) error
 	}
 	defer close(stmt)
 
-	_, err = stmt.Exec(pollid, inlinemessageid)
+	_, err = stmt.Exec(pollID, inlinemessageid)
 	if err != nil {
 		return fmt.Errorf("could not add message to poll: %v", err)
 	}
@@ -615,11 +615,11 @@ func (st *sqlStore) SavePoll(p *poll) (id int, err error) {
 	return id, nil
 }
 
-func (st *sqlStore) DeletePoll(userid int, pollid int) error {
+func (st *sqlStore) DeletePoll(userID int, pollID int) error {
 	// Ensure this user owns the poll
 	p := &poll{}
 	var err error
-	row := st.db.QueryRow("SELECT UserID, ID FROM poll WHERE UserID = ? AND ID = ? ORDER BY ID ASC LIMIT 1", userid, pollid)
+	row := st.db.QueryRow("SELECT UserID, ID FROM poll WHERE UserID = ? AND ID = ? ORDER BY ID ASC LIMIT 1", userID, pollID)
 	if err := row.Scan(&p.UserID, &p.ID); err != nil {
 		return fmt.Errorf("could not scan poll #%d: %v", p.ID, err)
 	}
@@ -643,7 +643,7 @@ func (st *sqlStore) DeletePoll(userid int, pollid int) error {
 		return fmt.Errorf("could not prepare answer sql statement: %v", err)
 	}
 	defer close(stmt)
-	_, err = stmt.Exec(pollid)
+	_, err = stmt.Exec(pollID)
 	if err != nil {
 		return fmt.Errorf("could not delete poll answers: %v", err)
 	}
@@ -652,7 +652,7 @@ func (st *sqlStore) DeletePoll(userid int, pollid int) error {
 	if err != nil {
 		return fmt.Errorf("could not prepare option sql statement: %v", err)
 	}
-	_, err = stmt.Exec(pollid)
+	_, err = stmt.Exec(pollID)
 	if err != nil {
 		return fmt.Errorf("could not delete poll options: %v", err)
 	}
@@ -661,7 +661,7 @@ func (st *sqlStore) DeletePoll(userid int, pollid int) error {
 	if err != nil {
 		return fmt.Errorf("could not prepare dialog sql statement: %v", err)
 	}
-	_, err = stmt.Exec(pollid)
+	_, err = stmt.Exec(pollID)
 	if err != nil {
 		return fmt.Errorf("could not delete poll dialog: %v", err)
 	}
@@ -670,7 +670,7 @@ func (st *sqlStore) DeletePoll(userid int, pollid int) error {
 	if err != nil {
 		return fmt.Errorf("could not prepare pollinlinemsg sql statement: %v", err)
 	}
-	_, err = stmt.Exec(pollid)
+	_, err = stmt.Exec(pollID)
 	if err != nil {
 		return fmt.Errorf("could not delete poll pollinlinemsg: %v", err)
 	}
@@ -679,7 +679,7 @@ func (st *sqlStore) DeletePoll(userid int, pollid int) error {
 	if err != nil {
 		return fmt.Errorf("could not prepare pollmsg sql statement: %v", err)
 	}
-	_, err = stmt.Exec(pollid)
+	_, err = stmt.Exec(pollID)
 	if err != nil {
 		return fmt.Errorf("could not delete poll pollmsg: %v", err)
 	}
@@ -688,7 +688,7 @@ func (st *sqlStore) DeletePoll(userid int, pollid int) error {
 	if err != nil {
 		return fmt.Errorf("could not prepare poll sql statement: %v", err)
 	}
-	_, err = stmt.Exec(pollid)
+	_, err = stmt.Exec(pollID)
 	if err != nil {
 		return fmt.Errorf("could not delete poll: %v", err)
 	}
