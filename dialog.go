@@ -39,7 +39,7 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 			state = ohHi
 			err = st.SaveState(userID, pollID, state)
 			if err != nil {
-				return fmt.Errorf("could not save state: %v", err)
+				return err
 			}
 			msg := tg.NewMessage(int64(update.Message.From.ID), locNoMessageToEdit)
 			_, err = bot.Send(&msg)
@@ -67,7 +67,7 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 		state = ohHi
 		err = st.SaveState(userID, pollID, state)
 		if err != nil {
-			return fmt.Errorf("could not save state: %v", err)
+			return err
 		}
 	}
 
@@ -99,7 +99,7 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 		state = waitingForOption
 		err = st.SaveState(userID, pollID, state)
 		if err != nil {
-			return fmt.Errorf("could not save state: %v", err)
+			return err
 		}
 
 		return nil
@@ -118,9 +118,7 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 			return fmt.Errorf("could not save poll: %v", err)
 		}
 
-		msg := tg.NewMessage(
-			int64(userID),
-			fmt.Sprintf(locGotEditQuestion, p.Question))
+		msg := tg.NewMessage(int64(userID), fmt.Sprintf(locGotEditQuestion, p.Question))
 		_, err = bot.Send(&msg)
 		if err != nil {
 			return fmt.Errorf("could not send message: %v", err)
@@ -129,9 +127,16 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 		state = editPoll
 		err = st.SaveState(userID, pollID, state)
 		if err != nil {
-			return fmt.Errorf("could not save state: %v", err)
+			return err
 		}
-		//return nil
+	}
+
+	if state == pollDone {
+		state = editPoll
+		err = st.SaveState(userID, pollID, state)
+		if err != nil {
+			return err
+		}
 	}
 
 	if state == editPoll {
@@ -165,19 +170,6 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 		_, err = sendInterMessage(bot, update, p)
 		if err != nil {
 			return fmt.Errorf("could not send inter message: %v", err)
-		}
-		return nil
-	}
-
-	if state == pollDone {
-		p, err := st.GetPoll(pollID)
-		if err != nil {
-			return fmt.Errorf("could not get poll: %v", err)
-		}
-
-		_, err = sendEditMessage(bot, int64(userID), p)
-		if err != nil {
-			return fmt.Errorf("could not post poll: %v", err)
 		}
 		return nil
 	}

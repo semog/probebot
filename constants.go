@@ -1,20 +1,29 @@
 package main
 
-const qryDummy = "dummy"
-const qryCreateNewPoll = "createNewPoll"
-const qryCreatePoll = "createpoll"
-const qryPollDone = "polldone"
+// Command list
+const (
+	qryDummy         = "dummy"
+	qryCreateNewPoll = "createNewPoll"
+	qryCreatePoll    = "createPoll"
+	qryPollDone      = "pollDone"
+)
 
-const qryEditPayload = 'e'
-const qryPrevPoll = "-"
-const qryNextPoll = "+"
-const qryToggleActive = "c"
-const qryToggleMultipleChoice = "m"
-const qryEditQuestion = "q"
-const qryAddOptions = "o"
-const qryToggleShowVotePct = "v"
-const qryDeletePoll = "d"
+// Query command sub-operators
+const (
+	qryEditPayload          = 'e'
+	qryPrevPoll             = "-"
+	qryNextPoll             = "+"
+	qryToggleActive         = "c"
+	qryToggleMultipleChoice = "m"
+	qryEditQuestion         = "q"
+	qryAddOptions           = "o"
+	qryToggleShowVotePct    = "v"
+	qryDeletePoll           = "d"
+)
 
+// Poll editing states. Do not change the order of these constants.
+// Their values are persisted to the database, and changing them could
+// break the application.
 const (
 	ohHi = iota
 	waitingForQuestion
@@ -40,7 +49,8 @@ const (
 	hideDisplayVotePercent
 )
 
-var maxNumberOfUsersListed = 100
-var maxPollsInlineQuery = 5
-
-const lineSep = "\u257C\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u257E"
+const (
+	maxNumberOfUsersListed = 100
+	maxPollsInlineQuery    = 5
+	lineSep                = "\u257C\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u257E"
+)

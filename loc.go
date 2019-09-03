@@ -15,7 +15,7 @@ const (
 	locDeletePollButton      = "delete poll"
 	locGotEditQuestion       = "Thanks, the question was changed to \"%s\"."
 	locNoMessageToEdit       = "Sorry, I could not find a poll to edit."
-	locCurrentlySelectedPoll = "Currently selected Poll:\n"
+	locCurrentlySelectedPoll = "Currently selected poll:\n"
 	locMainMenu              = "I can help you create, send and manage polls.\n\nWhat do you want to do?"
 	locAboutCommand          = "/about"
 	locAboutMessage          = "You can find me on github:\nhttps://github.com/semog/probebot"
@@ -27,6 +27,7 @@ const (
 	locToggleShowVotePct     = "show vote pct"
 	locToggleHideVotePct     = "hide vote pct"
 	locAddedOption           = "You can add more options by sending messages each containing one option. If you are done, please push the 'done' button.\n\nPreview:\n"
+	locPollIsInactive        = "This poll is inactive."
 )
 
 /*

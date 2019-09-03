@@ -51,9 +51,7 @@ func handleCallbackQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 		return fmt.Errorf("could not get poll: %v", err)
 	}
 	if p.isInactive() {
-		callbackConfig := tg.NewCallback(
-			update.CallbackQuery.ID,
-			"This poll is inactive.")
+		callbackConfig := tg.NewCallback(update.CallbackQuery.ID, locPollIsInactive)
 		_, err = bot.AnswerCallbackQuery(callbackConfig)
 		if err != nil {
 			return fmt.Errorf("could not send answer to callback query: %v", err)
@@ -281,7 +279,7 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 		state := waitingForOption
 		err = st.SaveState(update.CallbackQuery.From.ID, pollID, state)
 		if err != nil {
-			return fmt.Errorf("could not save state: %v", err)
+			return err
 		}
 
 		msg := tg.NewMessage(update.CallbackQuery.Message.Chat.ID, locAddOption)
@@ -294,7 +292,7 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 		state := editQuestion
 		err = st.SaveState(update.CallbackQuery.From.ID, pollID, state)
 		if err != nil {
-			return fmt.Errorf("could not save state: %v", err)
+			return err
 		}
 
 		msg := tg.NewMessage(update.CallbackQuery.Message.Chat.ID, locEditQuestion)
@@ -320,7 +318,7 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 				klog.Infof("could not get older poll: %v\n", err)
 				err = st.SaveState(update.CallbackQuery.From.ID, -1, ohHi)
 				if err != nil {
-					return fmt.Errorf("could not save state: %v", err)
+					return err
 				}
 				_, err = sendMainMenuMessage(bot, update)
 				if err != nil {
@@ -381,15 +379,11 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 		}
 	}
 
-	body := "Currently selected Poll:\n<pre>\n"
-	body += p.Question + "\n" + lineSep + "\n"
-	for i, o := range p.Options {
-		body += fmt.Sprintf("%d. %s", i+1, o.Text) + "\n"
-	}
-	body += "</pre>\n\n"
+	messageTxt := locCurrentlySelectedPoll
+	messageTxt += getFormattedPreviewPoll(p)
 
 	var ed tg.EditMessageTextConfig
-	ed.Text = body
+	ed.Text = messageTxt
 	ed.ParseMode = tg.ModeHTML
 	ed.ReplyMarkup = buildEditMarkup(p, noOlder, noNewer)
 

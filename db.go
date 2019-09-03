@@ -126,13 +126,13 @@ func (st *sqlStore) GetState(userID int) (state int, pollID int, err error) {
 func (st *sqlStore) SaveState(userID int, pollID int, state int) (err error) {
 	res, err := st.db.ExecResults("UPDATE dialog SET state = ? WHERE UserID = ?", userID, state)
 	if err != nil {
-		return fmt.Errorf("could not update state in database: %v", err)
+		return fmt.Errorf("could not save state: could not update state in database: %v", err)
 	}
 
 	if aff, err := res.RowsAffected(); aff == 0 || err != nil {
 		err = st.db.Exec("INSERT OR REPLACE INTO dialog(UserID, PollID, state) values(?, ?, ?)", userID, pollID, state)
 		if err != nil {
-			return fmt.Errorf("could not insert or replace state database entry: %v", err)
+			return fmt.Errorf("could not save state: could not insert or replace state database entry: %v", err)
 		}
 	}
 
