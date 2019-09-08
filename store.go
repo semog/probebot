@@ -1,6 +1,6 @@
 package main
 
-import tg "github.com/semog/telegram-bot-api"
+import tg "github.com/semog/go-bot-api"
 
 // Store is an interface for the persistent storage
 // should allow easier swapping of databases

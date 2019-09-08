@@ -5,8 +5,8 @@ import (
 	"html"
 
 	"github.com/kyokomi/emoji"
-	"github.com/semog/gocommon"
-	tg "github.com/semog/telegram-bot-api"
+	cmn "github.com/semog/go-common"
+	tg "github.com/semog/go-bot-api"
 	"k8s.io/klog"
 )
 
@@ -167,7 +167,7 @@ func buildPollListing(p *poll, st Store) (listing string) {
 			listing += emoji.Sprint(fmt.Sprintf("\n:ballot_box: <b>%s</b>%s", html.EscapeString(o.Text), part))
 
 			if usersOnAnswer > 0 {
-				maxNumberDisplayUsers := gocommon.Mini(usersOnAnswer, maxNumberOfUsersListed)
+				maxNumberDisplayUsers := cmn.Mini(usersOnAnswer, maxNumberOfUsersListed)
 				for j := 0; j+1 < maxNumberDisplayUsers; j++ {
 					listing += "\n\u251C " + getFormattedUserLink(listOfUsers[i][j])
 				}
