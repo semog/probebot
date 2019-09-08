@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/semog/go-sqldb"
-	tg "github.com/semog/go-bot-api"
+	tg "github.com/semog/go-bot-api/v4"
 	"k8s.io/klog"
 )
 

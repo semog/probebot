@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	tg "github.com/semog/go-bot-api"
+	tg "github.com/semog/go-bot-api/v4"
 	"k8s.io/klog"
 
 	_ "github.com/semog/go-sqldb"

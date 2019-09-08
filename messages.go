@@ -6,7 +6,7 @@ import (
 
 	"github.com/kyokomi/emoji"
 	cmn "github.com/semog/go-common"
-	tg "github.com/semog/go-bot-api"
+	tg "github.com/semog/go-bot-api/v4"
 	"k8s.io/klog"
 )
 
