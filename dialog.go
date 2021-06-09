@@ -153,7 +153,7 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 
 	if state == waitingForOption {
 		opts := []option{
-			option{
+			{
 				PollID: pollID,
 				Text:   update.Message.Text,
 			}}

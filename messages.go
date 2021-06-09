@@ -5,8 +5,8 @@ import (
 	"html"
 
 	"github.com/kyokomi/emoji"
-	cmn "github.com/semog/go-common"
 	tg "github.com/semog/go-bot-api/v4"
+	cmn "github.com/semog/go-common"
 	"k8s.io/klog"
 )
 
@@ -110,7 +110,7 @@ func buildPollMarkup(p *poll) *tg.InlineKeyboardMarkup {
 			row++
 			buttonrows = append(buttonrows, make([]tg.InlineKeyboardButton, 0))
 		}
-		label := fmt.Sprintf("%s", o.Text)
+		label :=  o.Text
 		callback := fmt.Sprintf("%d:%d", p.ID, o.ID)
 		button := tg.NewInlineKeyboardButtonData(label, callback)
 		buttonrows[row] = append(buttonrows[row], button)
@@ -187,6 +187,7 @@ func buildEditMarkup(p *poll, noOlder, noNewer bool) *tg.InlineKeyboardMarkup {
 	buttonrows = append(buttonrows, make([]tg.InlineKeyboardButton, 0))
 	buttonrows = append(buttonrows, make([]tg.InlineKeyboardButton, 0))
 	buttonrows = append(buttonrows, make([]tg.InlineKeyboardButton, 0))
+	buttonrows = append(buttonrows, make([]tg.InlineKeyboardButton, 0))
 
 	buttonLast := tg.NewInlineKeyboardButtonData("\u2B05", p.fmtQuery(qryPrevPoll))
 	buttonNext := tg.NewInlineKeyboardButtonData("\u27A1", p.fmtQuery(qryNextPoll))
@@ -222,12 +223,15 @@ func buildEditMarkup(p *poll, noOlder, noNewer bool) *tg.InlineKeyboardMarkup {
 	buttonDelete := tg.NewInlineKeyboardButtonData(locDeletePollButton, p.fmtQuery(qryDeletePoll))
 	buttonrows[3] = append(buttonrows[3], buttonInactive, buttonDelete)
 
+	buttonResetPoll := tg.NewInlineKeyboardButtonData(locResetPollButton, p.fmtQuery(qryResetPoll))
+	buttonrows[4] = append(buttonrows[4], buttonResetPoll)
+
 	buttonShare := tg.InlineKeyboardButton{
 		Text:              locSharePoll,
 		SwitchInlineQuery: &p.Question,
 	}
 	buttonNew := tg.NewInlineKeyboardButtonData(locCreateNewPoll, qryCreatePoll)
-	buttonrows[4] = append(buttonrows[4], buttonShare, buttonNew)
+	buttonrows[5] = append(buttonrows[5], buttonShare, buttonNew)
 
 	markup := tg.NewInlineKeyboardMarkup(buttonrows...)
 	return &markup

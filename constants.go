@@ -19,6 +19,7 @@ const (
 	qryAddOptions           = "o"
 	qryToggleShowVotePct    = "v"
 	qryDeletePoll           = "d"
+	qryResetPoll            = "r"
 )
 
 // Poll editing states. Do not change the order of these constants.

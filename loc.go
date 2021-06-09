@@ -13,6 +13,8 @@ const (
 	locAddOption             = "Alright, send options that you want to add to the poll, please."
 	locAddOptionButton       = "add options"
 	locDeletePollButton      = "delete poll"
+	locResetPollButton       = "reset poll"
+	locResetPollMessage      = "OK. The poll is reset. All answers were cleared."
 	locGotEditQuestion       = "Thanks, the question was changed to \"%s\"."
 	locNoMessageToEdit       = "Sorry, I could not find a poll to edit."
 	locCurrentlySelectedPoll = "Currently selected poll:\n"

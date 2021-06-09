@@ -85,7 +85,7 @@ func handleCallbackQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 
 	var popupText string
 	if unvoted {
-		popupText = fmt.Sprintf("Selection removed")
+		popupText = "Selection removed"
 	} else {
 		popupText = fmt.Sprintf(`You selected "%s"`, choice.Text)
 	}
@@ -301,10 +301,22 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 			return fmt.Errorf("could not send message: %v", err)
 		}
 		return nil
+	case qryResetPoll:
+		err = st.ResetPoll(update.CallbackQuery.From.ID, pollID)
+		if err != nil {
+			return fmt.Errorf("could not reset poll: %v", err)
+		}
+		pollsToUpdate.enqueue(pollID)
+		msg := tg.NewMessage(update.CallbackQuery.Message.Chat.ID, locResetPollMessage)
+		_, err = bot.Send(&msg)
+		if err != nil {
+			return fmt.Errorf("could not send message: %v", err)
+		}
+		return nil
 	case qryDeletePoll:
 		err = st.DeletePoll(update.CallbackQuery.From.ID, pollID)
 		if err != nil {
-			return fmt.Errorf("could not save state: %v", err)
+			return fmt.Errorf("could not delete poll: %v", err)
 		}
 		pollsToDelete.enqueue(pollID)
 		// Move to the next poll.

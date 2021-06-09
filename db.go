@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/semog/go-sqldb"
 	tg "github.com/semog/go-bot-api/v4"
+	"github.com/semog/go-sqldb"
 	"k8s.io/klog"
 )
 
@@ -613,6 +613,41 @@ func (st *sqlStore) SavePoll(p *poll) (id int, err error) {
 	}
 
 	return id, nil
+}
+
+func (st *sqlStore) ResetPoll(userID int, pollID int) error {
+	// Ensure this user owns the poll
+	p := &poll{}
+	var err error
+	row := st.db.QueryRow("SELECT UserID, ID FROM poll WHERE UserID = ? AND ID = ? ORDER BY ID ASC LIMIT 1", userID, pollID)
+	if err := row.Scan(&p.UserID, &p.ID); err != nil {
+		return fmt.Errorf("could not scan poll #%d: %v", p.ID, err)
+	}
+
+	tx, err := st.db.Begin()
+	if err != nil {
+		return fmt.Errorf("could not begin database transaction: %v", err)
+	}
+	defer func() {
+		if err != nil {
+			if err := tx.Rollback(); err != nil {
+				klog.Infof("could not rollback database change: %v", err)
+			}
+			return
+		}
+		err = tx.Commit()
+	}()
+
+	stmt, err := tx.Prepare("DELETE FROM answer where PollID = ?")
+	if err != nil {
+		return fmt.Errorf("could not prepare answer sql statement: %v", err)
+	}
+	defer close(stmt)
+	_, err = stmt.Exec(pollID)
+	if err != nil {
+		return fmt.Errorf("could not delete poll answers: %v", err)
+	}
+	return nil
 }
 
 func (st *sqlStore) DeletePoll(userID int, pollID int) error {
