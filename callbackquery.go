@@ -255,14 +255,14 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 			klog.Infof("could not get poll: %v\n", err)
 		}
 		toggleShowVotePct = true
-	case qryAddOptions:
+	case qryEditOptions:
 		state := waitingForOption
 		err = st.SaveState(update.CallbackQuery.From.ID, pollID, state)
 		if err != nil {
 			return err
 		}
 
-		msg := tg.NewMessage(update.CallbackQuery.Message.Chat.ID, locAddOption)
+		msg := tg.NewMessage(update.CallbackQuery.Message.Chat.ID, locEditOption)
 		_, err = bot.Send(&msg)
 		if err != nil {
 			return fmt.Errorf("could not send message: %v", err)

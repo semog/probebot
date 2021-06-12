@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 
 	tg "github.com/semog/go-bot-api/v4"
@@ -129,6 +131,7 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 		if err != nil {
 			return err
 		}
+		pollsToUpdate.enqueue(pollID)
 	}
 
 	if state == pollDone {
@@ -152,17 +155,61 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 	}
 
 	if state == waitingForOption {
+		p, err := st.GetPoll(pollID)
+		if err != nil {
+			return fmt.Errorf("could not get poll: %v", err)
+		}
+		isEdit, err := regexp.MatchString(`^[0-9]+\.[A-Za-z0-9 ]+`, update.Message.Text)
+		if err != nil {
+			return fmt.Errorf("could not match regexp: %v", err)
+		}
+		isDelete, err := regexp.MatchString(`^[0-9]+\.$`, update.Message.Text)
+		if err != nil {
+			return fmt.Errorf("could not match regexp: %v", err)
+		}
+		optID := 0
+		optText := update.Message.Text
+		if isEdit || isDelete {
+			r, err := regexp.Compile(`^([0-9]+)\.[ \t]*(.*)`)
+			if err != nil {
+				return fmt.Errorf("could not compile regexp: %v", err)
+			}
+			optionMatches := r.FindStringSubmatch(update.Message.Text)
+			if optionMatches == nil {
+				return fmt.Errorf("could not match regexp: %v", err)
+			}
+			optNum, err := strconv.Atoi(optionMatches[1])
+			if err != nil {
+				return fmt.Errorf("could not convert string to number: %v", err)
+			}
+			if optNum < 1 || optNum > len(p.Options) {
+				return fmt.Errorf("option out of range for edit or delete: %v", optNum)
+			}
+			optID = p.Options[optNum-1].ID
+			if len(optionMatches) > 2 {
+				optText = optionMatches[2]
+			}
+		}
+
 		opts := []option{
 			{
+				ID:     optID,
 				PollID: pollID,
-				Text:   update.Message.Text,
+				Text:   optText,
 			}}
+		if isDelete {
+			err = st.DeleteOptions(opts)
+		} else {
+			err = st.SaveOptions(opts)
+		}
 
-		err = st.SaveOptions(opts)
 		if err != nil {
 			return fmt.Errorf("could not save option: %v", err)
 		}
-		p, err := st.GetPoll(pollID)
+
+		pollsToUpdate.enqueue(pollID)
+		// Refresh the poll
+		p, err = st.GetPoll(pollID)
 		if err != nil {
 			return fmt.Errorf("could not get poll: %v", err)
 		}

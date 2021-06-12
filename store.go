@@ -23,6 +23,7 @@ type Store interface {
 	SaveUser(*tg.User) error
 	SavePoll(*poll) (int, error)
 	SaveOptions([]option) error
+	DeleteOptions([]option) error
 	SaveAnswer(*poll, answer) (unvoted bool, err error)
 	ResetPoll(userID int, pollID int) error
 	DeletePoll(userID int, pollID int) error

@@ -110,7 +110,7 @@ func buildPollMarkup(p *poll) *tg.InlineKeyboardMarkup {
 			row++
 			buttonrows = append(buttonrows, make([]tg.InlineKeyboardButton, 0))
 		}
-		label :=  o.Text
+		label := o.Text
 		callback := fmt.Sprintf("%d:%d", p.ID, o.ID)
 		button := tg.NewInlineKeyboardButtonData(label, callback)
 		buttonrows[row] = append(buttonrows[row], button)
@@ -148,9 +148,9 @@ func buildPollListing(p *poll, st Store) (listing string) {
 	//klog.Infof("Create listing for question: %s\n", p.Question)
 	numPolledUsers := len(polledUsers)
 	for i, o := range p.Options {
-		// Only display the option if there is at least one choice or if the poll is closed.
+		// Only display the option if there is at least one choice
 		usersOnAnswer := len(listOfUsers[i])
-		if usersOnAnswer > 0 || p.isInactive() {
+		if usersOnAnswer > 0 {
 			part := ""
 			if len(p.Answers) > 0 {
 				// Show the number of people that voted for the answer
@@ -212,8 +212,8 @@ func buildEditMarkup(p *poll, noOlder, noNewer bool) *tg.InlineKeyboardMarkup {
 	buttonrows[1] = append(buttonrows[1], buttonShowVotePct, buttonMultipleChoice)
 
 	buttonEditQuestion := tg.NewInlineKeyboardButtonData(locEditQuestionButton, p.fmtQuery(qryEditQuestion))
-	buttonAddOptions := tg.NewInlineKeyboardButtonData(locAddOptionButton, p.fmtQuery(qryAddOptions))
-	buttonrows[2] = append(buttonrows[2], buttonEditQuestion, buttonAddOptions)
+	buttonEditOptions := tg.NewInlineKeyboardButtonData(locEditOptionsButton, p.fmtQuery(qryEditOptions))
+	buttonrows[2] = append(buttonrows[2], buttonEditQuestion, buttonEditOptions)
 
 	buttonInactiveText := locToggleOpen
 	if p.isInactive() {

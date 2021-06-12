@@ -16,7 +16,7 @@ const (
 	qryToggleActive         = "c"
 	qryToggleMultipleChoice = "m"
 	qryEditQuestion         = "q"
-	qryAddOptions           = "o"
+	qryEditOptions          = "o"
 	qryToggleShowVotePct    = "v"
 	qryDeletePoll           = "d"
 	qryResetPoll            = "r"

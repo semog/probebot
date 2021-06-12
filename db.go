@@ -233,7 +233,7 @@ func (st *sqlStore) GetOptions(pollID int) ([]option, error) {
 
 	options := make([]option, 0)
 
-	rows, err := st.db.Query("SELECT Ctr, PollID, ID, Text FROM option WHERE PollID = ?", pollID)
+	rows, err := st.db.Query("SELECT Ctr, PollID, ID, Text FROM option WHERE PollID = ? ORDER BY ID", pollID)
 	if err != nil {
 		return options, fmt.Errorf("could not query options: %v", err)
 	}
@@ -478,9 +478,6 @@ func (st *sqlStore) RemoveInlineMsg(inlinemessageid string) error {
 }
 
 func (st *sqlStore) SaveOptions(options []option) error {
-	// option gets passed by value as we only change id numbers
-	// and do not append new elements this should be fine
-
 	tx, err := st.db.Begin()
 	if err != nil {
 		return fmt.Errorf("could not begin database transaction: %v", err)
@@ -501,14 +498,46 @@ func (st *sqlStore) SaveOptions(options []option) error {
 	defer close(stmt)
 
 	for i := 0; i < len(options); i++ {
-		id64, err := st.db.GetGkey()
-		if err != nil {
-			return fmt.Errorf("could not get gkey for option: %v", err)
+		if options[i].ID == 0 {
+			// Adding a new option
+			id64, err := st.db.GetGkey()
+			if err != nil {
+				return fmt.Errorf("could not get gkey for option: %v", err)
+			}
+			options[i].ID = int(id64)
 		}
-		options[i].ID = int(id64)
 		_, err = stmt.Exec(options[i].ID, options[i].PollID, options[i].Ctr, options[i].Text)
 		if err != nil {
-			return fmt.Errorf("could not insert option into sql database: %v", err)
+			return fmt.Errorf("could not insert or update option into sql database: %v", err)
+		}
+	}
+	return nil
+}
+
+func (st *sqlStore) DeleteOptions(options []option) error {
+	tx, err := st.db.Begin()
+	if err != nil {
+		return fmt.Errorf("could not begin database transaction: %v", err)
+	}
+	defer func() {
+		if err != nil {
+			if err := tx.Rollback(); err != nil {
+				klog.Infof("could not rollback database change: %v", err)
+			}
+			return
+		}
+		err = tx.Commit()
+	}()
+	stmt, err := tx.Prepare("DELETE FROM option WHERE ID = ?")
+	if err != nil {
+		return fmt.Errorf("could not prepare insert sql statement for options: %v", err)
+	}
+	defer close(stmt)
+
+	for i := 0; i < len(options); i++ {
+		_, err = stmt.Exec(options[i].ID)
+		if err != nil {
+			klog.Errorf("could not delete option from database: %v\n", err)
 		}
 	}
 	return nil
