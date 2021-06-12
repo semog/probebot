@@ -76,7 +76,7 @@ func (u *uniqueChan) dequeue() int {
 func newTimer() func() {
 	start := time.Now()
 	return func() {
-		klog.Infoln("This action took: ", time.Now().Sub(start))
+		klog.Infoln("This action took: ", time.Since(start))
 	}
 }
 

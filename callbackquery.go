@@ -12,15 +12,7 @@ import (
 
 func handleCallbackQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 	if update.CallbackQuery.Data == qryDummy {
-		callbackConfig := tg.NewCallback(
-			update.CallbackQuery.ID,
-			"")
-		_, err := bot.AnswerCallbackQuery(callbackConfig)
-		if err != nil {
-			return fmt.Errorf("could not send answer to callback query: %v", err)
-		}
-
-		return nil
+		return sendToastMessage(bot, update, "")
 	}
 
 	if update.CallbackQuery.Data[0] == qryEditPayload {
@@ -51,11 +43,7 @@ func handleCallbackQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 		return fmt.Errorf("could not get poll: %v", err)
 	}
 	if p.isInactive() {
-		callbackConfig := tg.NewCallback(update.CallbackQuery.ID, locPollIsInactive)
-		_, err = bot.AnswerCallbackQuery(callbackConfig)
-		if err != nil {
-			return fmt.Errorf("could not send answer to callback query: %v", err)
-		}
+		sendToastMessage(bot, update, locPollIsInactive)
 		return fmt.Errorf("poll %d is inactive", pollID)
 	}
 
@@ -90,15 +78,7 @@ func handleCallbackQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 		popupText = fmt.Sprintf(`You selected "%s"`, choice.Text)
 	}
 
-	callbackConfig := tg.NewCallback(
-		update.CallbackQuery.ID,
-		popupText)
-	_, err = bot.AnswerCallbackQuery(callbackConfig)
-	if err != nil {
-		return fmt.Errorf("could not send answer to callback query: %v", err)
-	}
-
-	return nil
+	return sendToastMessage(bot, update, popupText)
 }
 
 func updatePollMessages(bot *tg.BotAPI, pollID int, st Store) error {
@@ -307,17 +287,27 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 			return fmt.Errorf("could not reset poll: %v", err)
 		}
 		pollsToUpdate.enqueue(pollID)
-		msg := tg.NewMessage(update.CallbackQuery.Message.Chat.ID, locResetPollMessage)
-		_, err = bot.Send(&msg)
-		if err != nil {
-			return fmt.Errorf("could not send message: %v", err)
-		}
+		sendToastMessage(bot, update, locResetPollMessage)
 		return nil
 	case qryDeletePoll:
+		// The poll must be closed first
+		p, err = st.GetPoll(pollID)
+		if err != nil {
+			sendToastMessage(bot, update, locErrDeletingPollMessage)
+			return fmt.Errorf("could not get poll: %v", err)
+		}
+
+		if inactive != p.Inactive {
+			sendToastMessage(bot, update, locClosePollBeforeDeleteMessage)
+			return nil
+		}
+
 		err = st.DeletePoll(update.CallbackQuery.From.ID, pollID)
 		if err != nil {
+			sendToastMessage(bot, update, locErrDeletingPollMessage)
 			return fmt.Errorf("could not delete poll: %v", err)
 		}
+		sendToastMessage(bot, update, fmt.Sprintf(locPollDeletedMessage, p.Question))
 		pollsToDelete.enqueue(pollID)
 		// Move to the next poll.
 		p, err = st.GetPollOlder(pollID, update.CallbackQuery.From.ID)
@@ -363,7 +353,7 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 		}
 		_, err = st.SavePoll(p)
 		if err != nil {
-			klog.Infoln("Could not save toggled inactive state.")
+			klog.Infoln("could not save toggled inactive state.")
 		}
 	}
 
@@ -375,7 +365,7 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 		}
 		_, err = st.SavePoll(p)
 		if err != nil {
-			klog.Infoln("Could not save toggled multiple choice state.")
+			klog.Infoln("could not save toggled multiple choice state.")
 		}
 	}
 
@@ -387,7 +377,7 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 		}
 		_, err = st.SavePoll(p)
 		if err != nil {
-			klog.Infoln("Could not save toggled show vote percent state.")
+			klog.Infoln("could not save toggled show vote percent state.")
 		}
 	}
 
@@ -404,9 +394,18 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 
 	_, err = bot.Send(ed)
 	if err != nil {
-		return fmt.Errorf("could not update message: %v", err)
+		klog.Infof("could not update message: %v\n", err)
 	}
 	pollsToUpdate.enqueue(p.ID)
+	return nil
+}
+
+func sendToastMessage(bot *tg.BotAPI, update tg.Update, msg string) error {
+	callbackConfig := tg.NewCallback(update.CallbackQuery.ID, msg)
+	_, err := bot.AnswerCallbackQuery(callbackConfig)
+	if err != nil {
+		klog.Infof("could not send toast message: %v\n", err)
+	}
 	return nil
 }
 

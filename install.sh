@@ -1,6 +1,5 @@
 #!/bin/bash
-# Strip the debug symbols out of the executable.
-go build -ldflags '-s'
+./mk
 
 # TODO: Test for init.d vs systemd.
 sudo ./install-systemd.sh
