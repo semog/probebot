@@ -39,8 +39,16 @@ func (poll *poll) isInactive() bool {
 	return poll.Inactive == inactive
 }
 
+func (poll *poll) isSingleChoice() bool {
+	return poll.Type == standard
+}
+
 func (poll *poll) isMultipleChoice() bool {
 	return poll.Type == multipleChoice
+}
+
+func (poll *poll) isRankedVoting() bool {
+	return poll.Type == rankedVoting
 }
 
 func (poll *poll) isDisplayVotePercent() bool {

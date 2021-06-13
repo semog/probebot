@@ -53,9 +53,20 @@ func (st *sqlStore) GetUser(userID int) (*tg.User, error) {
 }
 
 func (st *sqlStore) GetPoll(pollID int) (*poll, error) {
+	return st.GetUserPoll(pollID, 0)
+}
+
+func (st *sqlStore) GetUserPoll(pollID int, userID int) (*poll, error) {
 	p := &poll{ID: pollID}
 	var err error
-	row := st.db.QueryRow("SELECT UserID, Question, Inactive, Type, DisplayPercent FROM poll WHERE ID = ?", pollID)
+	var row *sql.Row
+
+	if userID > 0 {
+		row = st.db.QueryRow("SELECT UserID, Question, Inactive, Type, DisplayPercent FROM poll WHERE ID = ? AND UserID = ?", pollID, userID)
+	} else {
+		row = st.db.QueryRow("SELECT UserID, Question, Inactive, Type, DisplayPercent FROM poll WHERE ID = ?", pollID)
+	}
+
 	if err := row.Scan(&p.UserID, &p.Question, &p.Inactive, &p.Type, &p.DisplayPercent); err != nil {
 		return p, fmt.Errorf("could not scan poll #%d: %v", p.ID, err)
 	}
@@ -306,8 +317,7 @@ func (st *sqlStore) SaveAnswer(p *poll, a answer) (unvoted bool, err error) {
 	}
 
 	if len(prevOpts) > 0 { // user voted before
-
-		// user clicked the same answer again
+		// user clicked the same answer again, so remove vote
 		if contains(prevOpts, a.OptionID) {
 			stmt, err = tx.Prepare("DELETE FROM answer where PollID = ? AND UserID = ? AND OptionID = ?")
 			if err != nil {
@@ -318,60 +328,30 @@ func (st *sqlStore) SaveAnswer(p *poll, a answer) (unvoted bool, err error) {
 				return false, fmt.Errorf("could not delete previous answer: %v", err)
 			}
 
-			// decrement previously selected option(s)
-			stmt, err = tx.Prepare("UPDATE option SET Ctr = Ctr - 1 WHERE Ctr > 0 AND ID = ?")
+			err = removeVotes(tx, make([]int, a.OptionID))
 			if err != nil {
-				return false, fmt.Errorf("could not prepare sql statement: %v", err)
-			}
-			if _, err = stmt.Exec(a.OptionID); err != nil {
-				return false, fmt.Errorf("could not decrement option: %v", err)
+				return false, err
 			}
 			return true, nil
 		}
 
-		if !p.isMultipleChoice() {
-
-			// decrement previously selected option(s)
-			stmt, err = tx.Prepare("UPDATE option SET Ctr = Ctr - 1 WHERE ID = ? AND Ctr > 0")
+		if p.isSingleChoice() {
+			err = removeVotes(tx, prevOpts)
+			// remove previous answers
+			stmt, err = tx.Prepare("DELETE FROM answer WHERE UserID = ? AND PollID = ?")
 			if err != nil {
 				return false, fmt.Errorf("could not prepare sql statement: %v", err)
 			}
-			for _, o := range prevOpts {
-				if _, err = stmt.Exec(o); err != nil {
-					return false, fmt.Errorf("could not decrement option: %v", err)
-				}
-			}
-
-			// update answer
-			stmt, err = tx.Prepare("UPDATE answer SET OptionID = ?, LastSaved = ? WHERE UserID = ? AND PollID = ?")
-			if err != nil {
-				return false, fmt.Errorf("could not prepare sql statement: %v", err)
-			}
-			_, err = stmt.Exec(a.OptionID, time.Now().UTC().Unix(), a.UserID, a.PollID)
+			_, err = stmt.Exec(a.UserID, a.PollID)
 			if err != nil {
 				return false, fmt.Errorf("could not update vote: %v", err)
 			}
-		} else {
-			// new vote
-			stmt, err = tx.Prepare("INSERT INTO answer(PollID, OptionID, UserID, LastSaved, CreatedAt) values(?, ?, ?, ?, ?)")
-			if err != nil {
-				return false, fmt.Errorf("could not prepare sql statement: %v", err)
-			}
-			_, err = stmt.Exec(a.PollID, a.OptionID, a.UserID, time.Now().UTC().Unix(), time.Now().UTC().Unix())
-			if err != nil {
-				return false, fmt.Errorf("could not insert answer: %v", err)
-			}
 		}
-	} else {
-		// new vote
-		stmt, err = tx.Prepare("INSERT INTO answer(PollID, OptionID, UserID, LastSaved, CreatedAt) values(?, ?, ?, ?, ?)")
-		if err != nil {
-			return false, fmt.Errorf("could not prepare sql statement: %v", err)
-		}
-		_, err = stmt.Exec(a.PollID, a.OptionID, a.UserID, time.Now().UTC().Unix(), time.Now().UTC().Unix())
-		if err != nil {
-			return false, fmt.Errorf("could not insert answer: %v", err)
-		}
+	}
+
+	err = addNewVote(tx, a)
+	if err != nil {
+		return false, err
 	}
 
 	// increment counter for option
@@ -386,6 +366,33 @@ func (st *sqlStore) SaveAnswer(p *poll, a answer) (unvoted bool, err error) {
 	}
 
 	return false, nil
+}
+
+func addNewVote(tx *sql.Tx, a answer) error {
+	// new vote
+	stmt, err := tx.Prepare("INSERT INTO answer(PollID, OptionID, UserID, LastSaved, CreatedAt) values(?, ?, ?, ?, ?)")
+	if err != nil {
+		return fmt.Errorf("could not prepare sql statement: %v", err)
+	}
+	_, err = stmt.Exec(a.PollID, a.OptionID, a.UserID, time.Now().UTC().Unix(), time.Now().UTC().Unix())
+	if err != nil {
+		return fmt.Errorf("could not insert answer: %v", err)
+	}
+	return nil
+}
+
+func removeVotes(tx *sql.Tx, voteIDs []int) error {
+	// decrement previously selected option(s)
+	stmt, err := tx.Prepare("UPDATE option SET Ctr = Ctr - 1 WHERE ID = ? AND Ctr > 0")
+	if err != nil {
+		return fmt.Errorf("could not prepare sql statement: %v", err)
+	}
+	for _, o := range voteIDs {
+		if _, err = stmt.Exec(o); err != nil {
+			return fmt.Errorf("could not decrement option: %v", err)
+		}
+	}
+	return nil
 }
 
 func (st *sqlStore) AddMsgToPoll(pollID int, messageID int, chatID int64) error {
@@ -528,14 +535,24 @@ func (st *sqlStore) DeleteOptions(options []option) error {
 		}
 		err = tx.Commit()
 	}()
-	stmt, err := tx.Prepare("DELETE FROM option WHERE ID = ?")
+	stmtDeleteOption, err := tx.Prepare("DELETE FROM option WHERE ID = ?")
 	if err != nil {
-		return fmt.Errorf("could not prepare insert sql statement for options: %v", err)
+		return fmt.Errorf("could not prepare delete sql statement for options: %v", err)
 	}
-	defer close(stmt)
+	defer close(stmtDeleteOption)
+
+	stmtDeleteAnswer, err := tx.Prepare("DELETE FROM answer WHERE OptionID = ?")
+	if err != nil {
+		return fmt.Errorf("could not prepare delete sql statement for answers: %v", err)
+	}
+	defer close(stmtDeleteAnswer)
 
 	for i := 0; i < len(options); i++ {
-		_, err = stmt.Exec(options[i].ID)
+		_, err = stmtDeleteAnswer.Exec(options[i].ID)
+		if err != nil {
+			klog.Errorf("could not delete answer from database: %v\n", err)
+		}
+		_, err = stmtDeleteOption.Exec(options[i].ID)
 		if err != nil {
 			klog.Errorf("could not delete option from database: %v\n", err)
 		}

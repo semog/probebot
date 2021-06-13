@@ -43,6 +43,7 @@ const (
 const (
 	standard = iota
 	multipleChoice
+	rankedVoting
 )
 
 const (

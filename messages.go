@@ -77,7 +77,7 @@ func sendNewQuestionMessage(bot *tg.BotAPI, update tg.Update, st Store) error {
 }
 
 func sendEditMessage(bot *tg.BotAPI, chatID int64, p *poll) (tg.Message, error) {
-	messageTxt := locCurrentlySelectedPoll
+	messageTxt := getSelectedPollHeader(p)
 	messageTxt += getFormattedPreviewPoll(p)
 	msg := tg.NewMessage(chatID, messageTxt)
 	msg.ParseMode = tg.ModeHTML
@@ -85,6 +85,18 @@ func sendEditMessage(bot *tg.BotAPI, chatID int64, p *poll) (tg.Message, error) 
 	return bot.Send(&msg)
 }
 
+func getSelectedPollHeader(p *poll) string {
+	var pollType string
+
+	if p.isRankedVoting() {
+		pollType = "ranked voting"
+	} else if p.isMultipleChoice() {
+		pollType = "multiple choice"
+	} else {
+		pollType = "single choice"
+	}
+	return fmt.Sprintf(locCurrentlySelectedPoll, pollType)
+}
 func getFormattedPreviewPoll(p *poll) string {
 	body := fmt.Sprintf("<pre>\n%s\n%s\n", p.Question, lineSep)
 	for i, o := range p.Options {
@@ -125,7 +137,7 @@ func buildPollListing(p *poll, st Store) (listing string) {
 	votesForOption := make(map[int]int)
 	for i, o := range p.Options {
 		for _, a := range p.Answers {
-			if !p.isMultipleChoice() {
+			if p.isSingleChoice() {
 				if _, ok := polledUsers[a.UserID]; ok {
 					continue
 				}
@@ -164,7 +176,8 @@ func buildPollListing(p *poll, st Store) (listing string) {
 				part += ")"
 			}
 
-			listing += emoji.Sprint(fmt.Sprintf("\n:ballot_box: <b>%s</b>%s", html.EscapeString(o.Text), part))
+			// listing += emoji.Sprint(fmt.Sprintf("\n:ballot_box: <b>%s</b>%s", html.EscapeString(o.Text), part))
+			listing += emoji.Sprint(fmt.Sprintf("\n<b>%s</b>%s", html.EscapeString(o.Text), part))
 
 			if usersOnAnswer > 0 {
 				maxNumberDisplayUsers := cmn.Mini(usersOnAnswer, maxNumberOfUsersListed)
@@ -207,6 +220,8 @@ func buildEditMarkup(p *poll, noOlder, noNewer bool) *tg.InlineKeyboardMarkup {
 	buttonMultipleChoiceText := locToggleSingleChoice
 	if p.isMultipleChoice() {
 		buttonMultipleChoiceText = locToggleMultipleChoice
+	} else if p.isRankedVoting() {
+		buttonMultipleChoiceText = locToggleRankedVoting
 	}
 	buttonMultipleChoice := tg.NewInlineKeyboardButtonData(buttonMultipleChoiceText, p.fmtQuery(qryToggleMultipleChoice))
 	buttonrows[1] = append(buttonrows[1], buttonShowVotePct, buttonMultipleChoice)

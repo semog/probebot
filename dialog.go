@@ -108,7 +108,7 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 	}
 
 	if state == editQuestion {
-		p, err := st.GetPoll(pollID)
+		p, err := st.GetUserPoll(pollID, userID)
 		if err != nil {
 			return fmt.Errorf("could not get poll: %v", err)
 		}
@@ -143,7 +143,7 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 	}
 
 	if state == editPoll {
-		p, err := st.GetPoll(pollID)
+		p, err := st.GetUserPoll(pollID, userID)
 		if err != nil {
 			return fmt.Errorf("could not get poll: %v", err)
 		}
@@ -155,7 +155,7 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 	}
 
 	if state == waitingForOption {
-		p, err := st.GetPoll(pollID)
+		p, err := st.GetUserPoll(pollID, userID)
 		if err != nil {
 			return fmt.Errorf("could not get poll: %v", err)
 		}
@@ -209,7 +209,7 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 
 		pollsToUpdate.enqueue(pollID)
 		// Refresh the poll
-		p, err = st.GetPoll(pollID)
+		p, err = st.GetUserPoll(pollID, userID)
 		if err != nil {
 			return fmt.Errorf("could not get poll: %v", err)
 		}

@@ -10,8 +10,9 @@ type Store interface {
 	AddMsgToPoll(pollID int, messageID int, chatID int64) error
 	AddInlineMsgToPoll(pollID int, inlineMessageID string) error
 	RemoveInlineMsg(inlineMessageID string) error
-	GetPoll(pollID int) (*poll, error)
 	GetUser(userID int) (*tg.User, error)
+	GetPoll(pollID int) (*poll, error)
+	GetUserPoll(pollID int, userID int) (*poll, error)
 	GetPollsByUser(userID int) ([]*poll, error)
 	GetPollID(messageID int) (int, error)
 	GetPollNewer(pollID int, userID int) (*poll, error)

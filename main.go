@@ -135,19 +135,10 @@ func run(bot *tg.BotAPI) error {
 					klog.Infof("could not save user: %v", err)
 				}
 
-				// TODO: Figure out what this is. Looks sketchy. :-(
-				// if update.InlineQuery.From.ID == 3761925 {
-				// 	err = handleInlineQueryAdmin(bot, update, st)
-				// 	if err != nil {
-				// 		klog.Infof("could not handle inline query: %v", err)
-				// 	}
-				// }
-
 				err = handleInlineQuery(bot, update, st)
 				if err != nil {
 					klog.Infof("could not handle inline query: %v", err)
 				}
-
 				continue
 			}
 
@@ -177,7 +168,6 @@ func run(bot *tg.BotAPI) error {
 				if err != nil {
 					klog.Infof("could not handle callback query: %v", err)
 				}
-
 				continue
 			}
 
