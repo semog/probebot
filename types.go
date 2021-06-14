@@ -5,17 +5,17 @@ import (
 )
 
 type answer struct {
-	ID       int
-	PollID   int
-	UserID   int
-	OptionID int
+	ID        int
+	PollID    int
+	UserID    int
+	OptionID  int
+	LastSaved int
 }
 
 type option struct {
 	ID     int
 	PollID int
 	Text   string
-	Ctr    int
 }
 
 type poll struct {
@@ -24,7 +24,6 @@ type poll struct {
 	UserID         int
 	Question       string
 	Inactive       int
-	Private        int
 	Type           int
 	DisplayPercent int
 	Options        []option

@@ -152,13 +152,12 @@ func run(bot *tg.BotAPI) error {
 				if err != nil {
 					return fmt.Errorf("could not add inline message to poll: %v", err)
 				}
+				klog.Infof("Added poll #%d to chat by %s", pollID, update.CallbackQuery.From.UserName)
 				continue
 			}
 
 			// CALLBACK QUERIES
 			if update.CallbackQuery != nil {
-				klog.Infof("CallbackQuery from [%s]: %s", update.CallbackQuery.From.UserName, update.CallbackQuery.Data)
-
 				err = st.SaveUser(update.CallbackQuery.From)
 				if err != nil {
 					klog.Infof("could not save user: %v", err)

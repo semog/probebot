@@ -157,37 +157,42 @@ func buildPollListing(p *poll, st Store) (listing string) {
 	}
 
 	listing += emoji.Sprintf("<b>%s</b>\n%s", html.EscapeString(p.Question), lineSep)
-	//klog.Infof("Create listing for question: %s\n", p.Question)
 	numPolledUsers := len(polledUsers)
+	var irvOptionIDs []int
+	if p.isRankedVoting() && numPolledUsers > 0 {
+		irvOptionIDs = getIRVOptionIDs(p)
+	}
+
 	for i, o := range p.Options {
 		// Only display the option if there is at least one choice
 		usersOnAnswer := len(listOfUsers[i])
-		if usersOnAnswer > 0 {
-			part := ""
-			if len(p.Answers) > 0 {
-				// Show the number of people that voted for the answer
-				part += emoji.Sprintf(" (%d :busts_in_silhouette:", usersOnAnswer)
-				if p.isDisplayVotePercent() {
-					part += fmt.Sprintf(" %.0f%%", 100.*float64(votesForOption[o.ID])/float64(numPolledUsers))
-					if votesForOption[o.ID] != o.Ctr {
-						klog.Infof("Counter for option #%d is off: %d stored vs. %d counted", o.ID, o.Ctr, votesForOption[o.ID])
-					}
-				}
-				part += ")"
-			}
-
-			// listing += emoji.Sprint(fmt.Sprintf("\n:ballot_box: <b>%s</b>%s", html.EscapeString(o.Text), part))
-			listing += emoji.Sprint(fmt.Sprintf("\n<b>%s</b>%s", html.EscapeString(o.Text), part))
-
-			if usersOnAnswer > 0 {
-				maxNumberDisplayUsers := cmn.Mini(usersOnAnswer, maxNumberOfUsersListed)
-				for j := 0; j+1 < maxNumberDisplayUsers; j++ {
-					listing += "\n\u251C " + getFormattedUserLink(listOfUsers[i][j])
-				}
-				listing += "\n\u2514 " + getFormattedUserLink(listOfUsers[i][usersOnAnswer-1])
-			}
-			listing += "\n"
+		if usersOnAnswer < 1 {
+			continue
 		}
+
+		part := ""
+		if len(p.Answers) > 0 {
+			// Show the number of people that voted for the answer
+			part += emoji.Sprintf(" (%d :busts_in_silhouette:", usersOnAnswer)
+			if p.isDisplayVotePercent() {
+				part += fmt.Sprintf(" %.0f%%", 100.*float64(votesForOption[o.ID])/float64(numPolledUsers))
+			}
+			part += ")"
+		}
+
+		listing += emoji.Sprint(fmt.Sprintf("\n<b>%s</b>%s", html.EscapeString(o.Text), part))
+		if intrg_contains(irvOptionIDs, o.ID) {
+			listing += emoji.Sprint("  :1st_place_medal:")
+		}
+
+		if usersOnAnswer > 0 {
+			maxNumberDisplayUsers := cmn.Mini(usersOnAnswer, maxNumberOfUsersListed)
+			for j := 0; j+1 < maxNumberDisplayUsers; j++ {
+				listing += "\n\u251C " + getFormattedUserLink(listOfUsers[i][j])
+			}
+			listing += "\n\u2514 " + getFormattedUserLink(listOfUsers[i][usersOnAnswer-1])
+		}
+		listing += "\n"
 	}
 	listing += emoji.Sprint(fmt.Sprintf("\n%d :busts_in_silhouette:\n", numPolledUsers))
 	return listing

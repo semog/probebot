@@ -42,7 +42,7 @@ func handleCallbackQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 	if err != nil {
 		return err
 	}
-	p, err := st.GetUserPoll(pollID, userID)
+	p, err := st.GetPoll(pollID)
 	if err != nil {
 		sendToastMessage(bot, update, locErrUpdatingPollMessage)
 		return fmt.Errorf("could not get poll: %v", err)
@@ -62,17 +62,16 @@ func handleCallbackQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 		return fmt.Errorf("could not save answers: %v", err)
 	}
 	// polls were changed
-	p, err = st.GetUserPoll(pollID, userID)
+	p, err = st.GetPoll(pollID)
 	if err != nil {
 		sendToastMessage(bot, update, locErrUpdatingPollMessage)
 		return fmt.Errorf("could not get poll: %v", err)
 	}
 
-	var choice option
-	for _, o := range p.Options {
-		if o.ID == newAnswer.OptionID {
-			choice = o
-		}
+	choice, err := findChoice(p, newAnswer.OptionID)
+	if err != nil {
+		sendToastMessage(bot, update, locErrUpdatingPollMessage)
+		return err
 	}
 
 	pollsToUpdate.enqueue(p.ID)
@@ -85,6 +84,15 @@ func handleCallbackQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 	}
 
 	return sendToastMessage(bot, update, popupText)
+}
+
+func findChoice(p *poll, optionID int) (option, error) {
+	for _, o := range p.Options {
+		if o.ID == optionID {
+			return o, nil
+		}
+	}
+	return option{}, fmt.Errorf("could not find option")
 }
 
 func updatePollMessages(bot *tg.BotAPI, pollID int, st Store) error {

@@ -79,4 +79,10 @@ var dbPatchFuncs = []sqldb.PatchFuncType{
 			CreatedAt INTEGER,
 			UserName TEXT)`)
 	}},
+	{PatchID: 2, PatchFunc: func(sdb *sqldb.SQLDb) error {
+		if err := sdb.Exec("ALTER TABLE poll DROP COLUMN Private"); err != nil {
+			return err
+		}
+		return sdb.Exec("ALTER TABLE option DROP COLUMN Ctr")
+	}},
 }
