@@ -9,7 +9,7 @@ type answer struct {
 	PollID    int
 	UserID    int
 	OptionID  int
-	LastSaved int
+	LastSaved int64
 }
 
 type option struct {
