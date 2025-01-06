@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	tg "github.com/semog/go-bot-api/v4"
+	tg "github.com/semog/go-bot-api/v5"
 	"k8s.io/klog"
 )
 
@@ -38,7 +38,7 @@ func handleInlineQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 		SwitchPMParameter: qryCreateNewPoll,
 	}
 
-	_, err = bot.AnswerInlineQuery(inlineConfig)
+	_, err = bot.Request(inlineConfig)
 	if err != nil {
 		return fmt.Errorf("could not answer inline query: %v", err)
 	}

@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	tg "github.com/semog/go-bot-api/v4"
+	tg "github.com/semog/go-bot-api/v5"
 	"github.com/semog/go-sqldb"
 	"k8s.io/klog"
 )
@@ -40,7 +40,7 @@ func newSQLStore(databaseFile string) *sqlStore {
 	return st
 }
 
-func (st *sqlStore) GetUser(userID int) (*tg.User, error) {
+func (st *sqlStore) GetUser(userID int64) (*tg.User, error) {
 	u := &tg.User{ID: userID}
 	row := st.db.QueryRow("SELECT FirstName, LastName, UserName FROM user WHERE ID = ?", userID)
 	if err := row.Scan(&u.FirstName, &u.LastName, &u.UserName); err != nil {
@@ -54,7 +54,7 @@ func (st *sqlStore) GetPoll(pollID int) (*poll, error) {
 	return st.GetUserPoll(pollID, 0)
 }
 
-func (st *sqlStore) GetUserPoll(pollID int, userID int) (*poll, error) {
+func (st *sqlStore) GetUserPoll(pollID int, userID int64) (*poll, error) {
 	p := &poll{ID: pollID}
 	var err error
 	var row *sql.Row
@@ -82,7 +82,7 @@ func (st *sqlStore) GetUserPoll(pollID int, userID int) (*poll, error) {
 	return p, nil
 }
 
-func (st *sqlStore) GetPollNewer(pollID int, userID int) (*poll, error) {
+func (st *sqlStore) GetPollNewer(pollID int, userID int64) (*poll, error) {
 	p := &poll{}
 	var err error
 	row := st.db.QueryRow("SELECT UserID, ID, Question, Inactive, Type, DisplayPercent FROM poll WHERE ID > ? AND UserID = ? ORDER BY ID ASC LIMIT 1", pollID, userID)
@@ -103,7 +103,7 @@ func (st *sqlStore) GetPollNewer(pollID int, userID int) (*poll, error) {
 	return p, nil
 }
 
-func (st *sqlStore) GetPollOlder(pollID int, userID int) (*poll, error) {
+func (st *sqlStore) GetPollOlder(pollID int, userID int64) (*poll, error) {
 	p := &poll{}
 	var err error
 	row := st.db.QueryRow("SELECT UserID, ID, Question, Inactive, Type, DisplayPercent FROM poll WHERE ID < ? AND UserID = ? ORDER BY ID DESC LIMIT 1", pollID, userID)
@@ -124,7 +124,7 @@ func (st *sqlStore) GetPollOlder(pollID int, userID int) (*poll, error) {
 	return p, nil
 }
 
-func (st *sqlStore) GetState(userID int) (state int, pollID int, err error) {
+func (st *sqlStore) GetState(userID int64) (state int, pollID int, err error) {
 	row := st.db.QueryRow("SELECT state, PollID FROM dialog WHERE UserID = ?", userID)
 	if err := row.Scan(&state, &pollID); err != nil {
 		return state, pollID, fmt.Errorf("could not scan state from row: %v", err)
@@ -132,7 +132,7 @@ func (st *sqlStore) GetState(userID int) (state int, pollID int, err error) {
 	return state, pollID, nil
 }
 
-func (st *sqlStore) SaveState(userID int, pollID int, state int) (err error) {
+func (st *sqlStore) SaveState(userID int64, pollID int, state int) (err error) {
 	res, err := st.db.ExecResults("UPDATE dialog SET state = ? WHERE UserID = ?", userID, state)
 	if err != nil {
 		return fmt.Errorf("could not save state: could not update state in database: %v", err)
@@ -148,7 +148,7 @@ func (st *sqlStore) SaveState(userID int, pollID int, state int) (err error) {
 	return nil
 }
 
-func (st *sqlStore) GetPollsByUser(userID int) ([]*poll, error) {
+func (st *sqlStore) GetPollsByUser(userID int64) ([]*poll, error) {
 	polls := make([]*poll, 0)
 	var err error
 	row, err := st.db.Query("SELECT ID, UserID, Question, Inactive, Type, DisplayPercent FROM poll WHERE UserID = ? ORDER BY ID DESC LIMIT 3", userID)
@@ -624,7 +624,7 @@ func (st *sqlStore) SavePoll(p *poll) (id int, err error) {
 	return id, nil
 }
 
-func (st *sqlStore) ResetPoll(userID int, pollID int) error {
+func (st *sqlStore) ResetPoll(userID int64, pollID int) error {
 	// Ensure this user owns the poll
 	p := &poll{}
 	var err error
@@ -659,7 +659,7 @@ func (st *sqlStore) ResetPoll(userID int, pollID int) error {
 	return nil
 }
 
-func (st *sqlStore) DeletePoll(userID int, pollID int) error {
+func (st *sqlStore) DeletePoll(userID int64, pollID int) error {
 	// Ensure this user owns the poll
 	p := &poll{}
 	var err error

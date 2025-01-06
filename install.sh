@@ -1,11 +1,12 @@
 #!/bin/bash
-./mk
 
-# TODO: Test for init.d vs systemd.
-sudo ./install-systemd.sh
-
-# For init.d:
-# sudo ./install-initd.sh
-
-# TODO: Prompt for bot token and replace in the installed script file.
-
+if [[ `systemctl` =~ -\.mount ]]; then
+	sudo ./install-systemd.sh
+elif [[ `/sbin/init --version` =~ upstart ]]; then
+	echo Upstart system not supported. Attempting init.d install...
+	sudo ./install-initd.sh
+elif [[ -f /etc/init.d/cron && ! -h /etc/init.d/cron ]]; then
+	sudo ./install-initd.sh
+else
+	echo Unknown init system
+fi

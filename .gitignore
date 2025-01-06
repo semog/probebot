@@ -25,3 +25,5 @@ _testmain.go
 probebot
 probes.db
 __debug_bin
+localdev
+proddev

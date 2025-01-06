@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	tg "github.com/semog/go-bot-api/v4"
+	tg "github.com/semog/go-bot-api/v5"
 	"k8s.io/klog"
 )
 
@@ -191,7 +191,7 @@ func updatePollMessages(bot *tg.BotAPI, pollID int, st Store) error {
 	return nil
 }
 
-func deletePollMessages(bot *tg.BotAPI, pollID int, st Store) error {
+func deletePollMessages(_ *tg.BotAPI /*bot*/, _ int /*pollID*/, _ Store /*st*/) error {
 	klog.Infof("TODO: delete existing shared poll messages.")
 	return nil
 }
@@ -442,7 +442,7 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 
 func sendToastMessage(bot *tg.BotAPI, update tg.Update, msg string) error {
 	callbackConfig := tg.NewCallback(update.CallbackQuery.ID, msg)
-	_, err := bot.AnswerCallbackQuery(callbackConfig)
+	_, err := bot.Request(callbackConfig)
 	if err != nil {
 		klog.Infof("could not send toast message: %v\n", err)
 	}

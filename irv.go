@@ -17,7 +17,7 @@ func getIRVOptionIDs(p *poll) []int {
 	for {
 		// Weighted count of votes for each option
 		voteCount = make(map[int]int)
-		voteMatrix := make(map[int][]int)
+		voteMatrix := make(map[int64][]int)
 		// Build the evaluation matrix
 		for _, a := range p.Answers {
 			if !intrg_contains(eliminatedOptions, a.OptionID) {

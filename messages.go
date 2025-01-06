@@ -5,12 +5,12 @@ import (
 	"html"
 
 	"github.com/kyokomi/emoji"
-	tg "github.com/semog/go-bot-api/v4"
+	tg "github.com/semog/go-bot-api/v5"
 	cmn "github.com/semog/go-common"
 	"k8s.io/klog"
 )
 
-func getUpdateUserID(update tg.Update) (int, error) {
+func getUpdateUserID(update tg.Update) (int64, error) {
 	if update.Message != nil {
 		return update.Message.From.ID, nil
 	}
@@ -132,7 +132,7 @@ func buildPollMarkup(p *poll) *tg.InlineKeyboardMarkup {
 }
 
 func buildPollListing(p *poll, st Store) (listing string) {
-	polledUsers := make(map[int]struct{})
+	polledUsers := make(map[int64]struct{})
 	listOfUsers := make([][]*tg.User, len(p.Options))
 	votesForOption := make(map[int]int)
 	for i, o := range p.Options {

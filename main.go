@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	tg "github.com/semog/go-bot-api/v4"
+	tg "github.com/semog/go-bot-api/v5"
 	"k8s.io/klog"
 
 	_ "github.com/semog/go-sqldb"
@@ -105,11 +105,7 @@ func run(bot *tg.BotAPI) error {
 	u := tg.NewUpdate(0)
 	u.Timeout = 60
 
-	updates, err := bot.GetUpdatesChan(u)
-	if err != nil {
-		return fmt.Errorf("could not prepare update channel: %v", err)
-	}
-
+	updates := bot.GetUpdatesChan(u)
 	for {
 		select {
 		case pollID := <-pollsToUpdateConstRate:
@@ -130,7 +126,7 @@ func run(bot *tg.BotAPI) error {
 			if update.InlineQuery != nil {
 				klog.Infof("InlineQuery from [%s]: %s", update.InlineQuery.From.UserName, update.InlineQuery.Query)
 
-				err = st.SaveUser(update.InlineQuery.From)
+				err := st.SaveUser(update.InlineQuery.From)
 				if err != nil {
 					klog.Infof("could not save user: %v", err)
 				}
@@ -158,7 +154,7 @@ func run(bot *tg.BotAPI) error {
 
 			// CALLBACK QUERIES
 			if update.CallbackQuery != nil {
-				err = st.SaveUser(update.CallbackQuery.From)
+				err := st.SaveUser(update.CallbackQuery.From)
 				if err != nil {
 					klog.Infof("could not save user: %v", err)
 				}
@@ -174,7 +170,7 @@ func run(bot *tg.BotAPI) error {
 				continue
 			}
 
-			err = st.SaveUser(update.Message.From)
+			err := st.SaveUser(update.Message.From)
 			if err != nil {
 				klog.Infof("could not save user: %v", err)
 			}

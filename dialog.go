@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	tg "github.com/semog/go-bot-api/v4"
+	tg "github.com/semog/go-bot-api/v5"
 	"k8s.io/klog"
 )
 
@@ -19,7 +19,7 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 	}
 
 	if strings.Contains(update.Message.Text, locAboutCommand) {
-		msg := tg.NewMessage(int64(userID), locAboutMessage)
+		msg := tg.NewMessage(userID, locAboutMessage)
 		_, err = bot.Send(&msg)
 		if err != nil {
 			return fmt.Errorf("could not send message: %v", err)

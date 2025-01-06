@@ -7,7 +7,7 @@ import (
 type answer struct {
 	ID        int
 	PollID    int
-	UserID    int
+	UserID    int64
 	OptionID  int
 	LastSaved int64
 }
@@ -21,7 +21,7 @@ type option struct {
 type poll struct {
 	ID             int
 	MessageID      int
-	UserID         int
+	UserID         int64
 	Question       string
 	Inactive       int
 	Type           int
