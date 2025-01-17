@@ -7,6 +7,8 @@ import tg "github.com/semog/go-bot-api/v5"
 type Store interface {
 	Init(databaseFile string) error
 	Close()
+	GetUpdateOffset() int
+	SaveUpdateOffset(offset int) error
 	AddMsgToPoll(pollID int, messageID int, chatID int64) error
 	AddInlineMsgToPoll(pollID int, inlineMessageID string) error
 	RemoveInlineMsg(inlineMessageID string) error

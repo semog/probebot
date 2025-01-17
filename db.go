@@ -40,6 +40,23 @@ func newSQLStore(databaseFile string) *sqlStore {
 	return st
 }
 
+func (st *sqlStore) GetUpdateOffset() (offset int) {
+	row := st.db.QueryRow("SELECT Offset FROM bot_updates WHERE ID = 1")
+	if err := row.Scan(&offset); err != nil {
+		return 0
+	}
+	return offset
+}
+
+func (st *sqlStore) SaveUpdateOffset(offset int) (err error) {
+	// DO an upsert into the bot_updates table
+	err = st.db.Exec("INSERT INTO bot_updates(ID, Offset) values(1, ?) ON CONFLICT(ID) DO UPDATE SET Offset = excluded.Offset", offset)
+	if err != nil {
+		return fmt.Errorf("could not save bot updates offset: %v", err)
+	}
+	return nil
+}
+
 func (st *sqlStore) GetUser(userID int64) (*tg.User, error) {
 	u := &tg.User{ID: userID}
 	row := st.db.QueryRow("SELECT FirstName, LastName, UserName FROM user WHERE ID = ?", userID)

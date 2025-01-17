@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	tg "github.com/semog/go-bot-api/v5"
 	"k8s.io/klog"
@@ -101,11 +100,6 @@ func updatePollMessages(bot *tg.BotAPI, pollID int, st Store) error {
 		return fmt.Errorf("could not get poll: %v", err)
 	}
 
-	//msgs, err := st.GetAllPollMsg(pollID)
-	//if err != nil {
-	//return fmt.Errorf("could not get all pollmsgs: %v", err)
-	//}
-
 	listing := buildPollListing(p, st)
 
 	var ed tg.EditMessageTextConfig
@@ -115,31 +109,6 @@ func updatePollMessages(bot *tg.BotAPI, pollID int, st Store) error {
 	if !p.isInactive() {
 		ed.ReplyMarkup = buildPollMarkup(p)
 	}
-
-	//for _, msg := range msgs {
-	//ed.ChatID = msg.ChatID
-	//ed.MessageID = msg.MessageID
-
-	//_, err = bot.Send(ed)
-	//if err != nil {
-	//klog.Infof("Could not edit message: %v \nThe message was: %s\n", err, ed.Text)
-	//klog.Infof("Could not edit message: %v\n", err)
-	//splits := strings.Split(ed.Text, "\n")
-
-	//ed.Text = ""
-	//for _, l := range splits {
-	//if !strings.HasPrefix(l, "\u251C") && !strings.HasPrefix(l, "\u2514") {
-	//ed.Text += l + "\n"
-	//}
-	//}
-	//klog.Infof("try again:\n %s", ed.Text)
-	//_, err = bot.Send(ed)
-	//if err != nil {
-	//klog.Infof("could not update message: %v\n", err)
-	//continue
-	//}
-	//}
-	//}
 
 	// reset
 	ed.ChatID = 0
@@ -153,39 +122,7 @@ func updatePollMessages(bot *tg.BotAPI, pollID int, st Store) error {
 	for _, msg := range msgs {
 		ed.Text = listing
 		ed.InlineMessageID = msg.InlineMessageID
-		_, err := bot.Send(ed)
-		if err != nil {
-			if strings.Contains(err.Error(), "MESSAGE_ID_INVALID") {
-				klog.Infof("Remove inline message %s\n", msg.InlineMessageID)
-				st.RemoveInlineMsg(msg.InlineMessageID)
-				continue
-			}
-			// if strings.Contains(err.Error(), "chat not found") {
-			// 	klog.Infof("Remove inline message %s\n", msg.InlineMessageID)
-			// 	st.RemoveInlineMsg(msg.InlineMessageID)
-			// }
-			if strings.Contains(err.Error(), "message is not modified") {
-				continue
-			}
-			time.Sleep(20 * time.Millisecond)
-			klog.Infof("\n\n\nCould not edit inline message: %v \nThe message was: %s\n", err, ed.Text)
-			klog.Infof("Could not edit inline message: %v\n", err)
-			splits := strings.Split(ed.Text, "\n")
-
-			ed.Text = ""
-			for _, l := range splits {
-				if !strings.HasPrefix(l, "\u251C") && !strings.HasPrefix(l, "\u2514") {
-					ed.Text += l + "\n"
-				}
-			}
-			klog.Infof("try again:\n %s", ed.Text)
-			_, err = bot.Send(ed)
-			if err != nil {
-				klog.Infof("could not update inline message: %v\n", err)
-				continue
-			}
-		}
-		time.Sleep(20 * time.Millisecond)
+		bot.Send(ed)
 	}
 
 	return nil

@@ -31,7 +31,7 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 	if err != nil {
 		// could not retrieve state -> state is zero
 		state = ohHi
-		klog.Infof("could not get state from database: %v\n", err)
+		klog.Infof("Starting new dialog with user %s\n", update.Message.From.UserName)
 	}
 
 	if strings.Contains(update.Message.Text, locEditCommand) {

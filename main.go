@@ -42,14 +42,14 @@ func main() {
 	}
 }
 
-var pollsToUpdateConstRate = make(chan int, 10)
+var pollsToUpdateConstRate = make(chan int, 200)
 var pollsToUpdate = newUniqueChan()
-var pollsToDeleteConstRate = make(chan int, 10)
+var pollsToDeleteConstRate = make(chan int, 200)
 var pollsToDelete = newUniqueChan()
 
 func newUniqueChan() *uniqueChan {
 	return &uniqueChan{
-		C:   make(chan int, 1000),
+		C:   make(chan int, 10000),
 		ids: make(map[int]struct{})}
 }
 
@@ -59,12 +59,8 @@ type uniqueChan struct {
 }
 
 func (u *uniqueChan) enqueue(id int) {
-	if _, ok := u.ids[id]; ok {
-		klog.Infof("Update for poll #%d is already scheduled.\n", id)
-		return
-	}
-	u.C <- id
 	u.ids[id] = struct{}{}
+	u.C <- id
 }
 
 func (u *uniqueChan) dequeue() int {
@@ -73,25 +69,18 @@ func (u *uniqueChan) dequeue() int {
 	return id
 }
 
-func newTimer() func() {
-	start := time.Now()
-	return func() {
-		klog.Infoln("This action took: ", time.Since(start))
-	}
-}
-
 func run(bot *tg.BotAPI) error {
 	// fill update channel with constant rate
 	go func() {
 		for {
-			time.Sleep(400 * time.Millisecond)
+			time.Sleep(900 * time.Millisecond)
 			pollID := pollsToUpdate.dequeue()
 			pollsToUpdateConstRate <- pollID
 		}
 	}()
 	go func() {
 		for {
-			time.Sleep(400 * time.Millisecond)
+			time.Sleep(900 * time.Millisecond)
 			pollID := pollsToDelete.dequeue()
 			pollsToDeleteConstRate <- pollID
 		}
@@ -102,25 +91,31 @@ func run(bot *tg.BotAPI) error {
 
 	klog.Infof("Authorized on account %s", bot.Self.UserName)
 
-	u := tg.NewUpdate(0)
+	u := tg.NewUpdate(st.GetUpdateOffset())
 	u.Timeout = 60
 
+	// Reload periodically to get a fresh connection to the Telegram servers.
+	reloadTimer := time.NewTimer(20 * time.Hour)
+	// Start the update loop
 	updates := bot.GetUpdatesChan(u)
 	for {
 		select {
-		case pollID := <-pollsToUpdateConstRate:
-			err := updatePollMessages(bot, pollID, st)
+		case <-reloadTimer.C:
+			os.Exit(69)
+		case updatePollID := <-pollsToUpdateConstRate:
+			klog.Infof("Updating poll #%d\n", updatePollID)
+			err := updatePollMessages(bot, updatePollID, st)
 			if err != nil {
-				klog.Infof("Could not update poll #%d: %v", pollID, err)
+				klog.Infof("Could not update poll #%d: %v", updatePollID, err)
 			}
-		case pollID := <-pollsToDeleteConstRate:
-			err := deletePollMessages(bot, pollID, st)
+		case deletePollID := <-pollsToDeleteConstRate:
+			klog.Infof("Deleting poll #%d\n", deletePollID)
+			err := deletePollMessages(bot, deletePollID, st)
 			if err != nil {
-				klog.Infof("Could not delete poll #%d messages: %v", pollID, err)
+				klog.Infof("Could not delete poll #%d messages: %v", deletePollID, err)
 			}
 		case update := <-updates:
-			stopTimer := newTimer()
-			defer stopTimer()
+			defer st.SaveUpdateOffset(update.UpdateID + 1)
 
 			// INLINE QUERIES
 			if update.InlineQuery != nil {

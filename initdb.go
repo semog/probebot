@@ -85,4 +85,10 @@ var dbPatchFuncs = []sqldb.PatchFuncType{
 		}
 		return sdb.Exec("ALTER TABLE option DROP COLUMN Ctr")
 	}},
+	{PatchID: 3, PatchFunc: func(sdb *sqldb.SQLDb) error {
+		// Table for tracking the bot update offset
+		return sdb.CreateTable(`bot_updates(
+			ID INTEGER PRIMARY KEY ASC,
+			Offset INTEGER)`)
+	}},
 }
