@@ -29,15 +29,6 @@ var dbPatchFuncs = []sqldb.PatchFuncType{
 		if err := sdb.CreateIndex("poll_index ON poll(ID)"); err != nil {
 			return err
 		}
-		if err := sdb.CreateTable(`pollmsg(
-			MessageID INTEGER PRIMARY KEY,
-			ChatId INTEGER,
-			PollID INTEGER)`); err != nil {
-			return err
-		}
-		if err := sdb.CreateIndex("pollmsg_index ON pollmsg(MessageID)"); err != nil {
-			return err
-		}
 		if err := sdb.CreateTable(`pollinlinemsg(
 			InlineMessageID TEXT PRIMARY KEY,
 			PollID INTEGER)`); err != nil {
@@ -90,5 +81,22 @@ var dbPatchFuncs = []sqldb.PatchFuncType{
 		return sdb.CreateTable(`bot_updates(
 			ID INTEGER PRIMARY KEY ASC,
 			Offset INTEGER)`)
+	}},
+	{PatchID: 4, PatchFunc: func(sdb *sqldb.SQLDb) error {
+		// Clean up the database. Invalid UserID of 0 was allowed to be inserted.
+		if err := sdb.Exec("DELETE FROM answer WHERE UserID = 0"); err != nil {
+			return err
+		}
+		if err := sdb.Exec("DELETE FROM poll WHERE UserID = 0"); err != nil {
+			return err
+		}
+		if err := sdb.Exec("DELETE FROM dialog WHERE UserID = 0"); err != nil {
+			return err
+		}
+		if err := sdb.Exec("DELETE FROM user WHERE ID = 0"); err != nil {
+			return err
+		}
+		// Remove dead code table
+		return sdb.Exec("DROP TABLE IF EXISTS pollmsg")
 	}},
 }

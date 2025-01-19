@@ -124,6 +124,7 @@ func run(bot *tg.BotAPI) error {
 				err := st.SaveUser(update.InlineQuery.From)
 				if err != nil {
 					klog.Infof("could not save user: %v", err)
+					continue
 				}
 
 				err = handleInlineQuery(bot, update, st)
@@ -152,6 +153,7 @@ func run(bot *tg.BotAPI) error {
 				err := st.SaveUser(update.CallbackQuery.From)
 				if err != nil {
 					klog.Infof("could not save user: %v", err)
+					continue
 				}
 
 				err = handleCallbackQuery(bot, update, st)
@@ -168,6 +170,7 @@ func run(bot *tg.BotAPI) error {
 			err := st.SaveUser(update.Message.From)
 			if err != nil {
 				klog.Infof("could not save user: %v", err)
+				continue
 			}
 
 			// Messages

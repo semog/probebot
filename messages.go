@@ -11,10 +11,9 @@ import (
 )
 
 func getUpdateUserID(update tg.Update) (int64, error) {
-	if update.Message != nil {
+	if update.Message != nil && update.Message.From.ID != 0 {
 		return update.Message.From.ID, nil
-	}
-	if update.CallbackQuery != nil {
+	} else if update.CallbackQuery != nil && update.CallbackQuery.From.ID != 0 {
 		return update.CallbackQuery.From.ID, nil
 	}
 	return 0, fmt.Errorf("invalid update info: no valid user ID found")

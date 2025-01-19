@@ -35,6 +35,7 @@ const (
 	locPollDeletedMessage           = "Poll deleted: %s"
 	locErrUpdatingPollMessage       = "Error updating poll"
 	locErrDeletingPollMessage       = "Error deleting poll"
+	locInvalidUserMessage           = "Could not find user information.\nPlease try the selection again."
 	locSelectionRemoved             = "Selection removed"
 	locYouSelected                  = `You selected "%s"`
 )

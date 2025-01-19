@@ -39,6 +39,7 @@ func handleCallbackQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 
 	userID, err := getUpdateUserID(update)
 	if err != nil {
+		sendToastMessage(bot, update, locInvalidUserMessage)
 		return err
 	}
 	p, err := st.GetPoll(pollID)
@@ -97,7 +98,7 @@ func findChoice(p *poll, optionID int) (option, error) {
 func updatePollMessages(bot *tg.BotAPI, pollID int, st Store) error {
 	p, err := st.GetPoll(pollID)
 	if err != nil {
-		return fmt.Errorf("could not get poll: %v", err)
+		return fmt.Errorf("could not find poll #%d: %v", pollID, err)
 	}
 
 	listing := buildPollListing(p, st)
@@ -129,7 +130,7 @@ func updatePollMessages(bot *tg.BotAPI, pollID int, st Store) error {
 }
 
 func deletePollMessages(_ *tg.BotAPI /*bot*/, _ int /*pollID*/, _ Store /*st*/) error {
-	klog.Infof("TODO: delete existing shared poll messages.")
+	klog.Infof("TODO: delete existing shared poll messages. Scan pollinlinemsg table and send delete messages for the IDs")
 	return nil
 }
 
