@@ -94,6 +94,14 @@ func run(bot *tg.BotAPI) error {
 	u := tg.NewUpdate(st.GetUpdateOffset())
 	u.Timeout = 60
 
+	// Start the poll service job
+	go func() {
+		ticker := time.NewTicker(1 * time.Minute)
+		for range ticker.C {
+			checkAndUpdatePolls(st)
+		}
+	}()
+
 	// Reload periodically to get a fresh connection to the Telegram servers.
 	reloadTimer := time.NewTimer(20 * time.Hour)
 	// Start the update loop

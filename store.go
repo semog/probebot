@@ -27,4 +27,7 @@ type Store interface {
 	SaveAnswer(*poll, answer) (unvoted bool, err error)
 	ResetPoll(userID int64, pollID int) error
 	DeletePoll(userID int64, pollID int) error
+	GetPollsWithCloseAtBefore(timestamp int64) ([]*poll, error)
+	GetPollsWithResetAtBefore(timestamp int64) ([]*poll, error)
+	GetPollsWithOpenAtBefore(timestamp int64) ([]*poll, error)
 }

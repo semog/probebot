@@ -65,7 +65,7 @@ var dbPatchFuncs = []sqldb.PatchFuncType{
 		return sdb.CreateTable(`user(
 			ID INTEGER PRIMARY KEY,
 			FirstName TEXT,
-			LastName Text,
+			LastName TEXT,
 			LastSaved INTEGER,
 			CreatedAt INTEGER,
 			UserName TEXT)`)
@@ -98,5 +98,23 @@ var dbPatchFuncs = []sqldb.PatchFuncType{
 		}
 		// Remove dead code table
 		return sdb.Exec("DROP TABLE IF EXISTS pollmsg")
+	}},
+	{PatchID: 5, PatchFunc: func(sdb *sqldb.SQLDb) error {
+		if err := sdb.Exec(`ALTER TABLE poll ADD COLUMN CloseAt INTEGER DEFAULT 0`); err != nil {
+			return err
+		}
+		if err := sdb.Exec(`ALTER TABLE poll ADD COLUMN CloseEvery TEXT DEFAULT ""`); err != nil {
+			return err
+		}
+		if err := sdb.Exec(`ALTER TABLE poll ADD COLUMN ResetAt INTEGER DEFAULT 0`); err != nil {
+			return err
+		}
+		if err := sdb.Exec(`ALTER TABLE poll ADD COLUMN ResetEvery TEXT DEFAULT ""`); err != nil {
+			return err
+		}
+		if err := sdb.Exec(`ALTER TABLE poll ADD COLUMN OpenAt INTEGER DEFAULT 0`); err != nil {
+			return err
+		}
+		return sdb.Exec(`ALTER TABLE poll ADD COLUMN OpenEvery TEXT DEFAULT ""`)
 	}},
 }

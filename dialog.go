@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	tg "github.com/semog/go-bot-api/v5"
 	"k8s.io/klog"
@@ -104,6 +105,135 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 			return err
 		}
 
+		return nil
+	}
+
+	if state == waitingForCloseAt {
+		p, err := st.GetUserPoll(pollID, userID)
+		if err != nil {
+			return fmt.Errorf("could not get poll: %v", err)
+		}
+
+		closeAt := calcNextServiceTime(time.Now().Unix(), update.Message.Text)
+		if closeAt == 0 {
+			msg := tg.NewMessage(int64(userID), locInvalidDateTime)
+			_, err = bot.Send(&msg)
+			if err != nil {
+				return fmt.Errorf("could not send message: %v", err)
+			}
+			return nil
+		}
+
+		p.CloseEvery = update.Message.Text
+		p.CloseAt = closeAt
+		_, err = st.SavePoll(p)
+		if err != nil {
+			return fmt.Errorf("could not save poll: %v", err)
+		}
+
+		msg := tg.NewMessage(int64(userID), fmt.Sprintf(locCloseAtSet, time.Unix(closeAt, 0).Format(dateTimeFormat)))
+		_, err = bot.Send(&msg)
+		if err != nil {
+			return fmt.Errorf("could not send message: %v", err)
+		}
+
+		state = editPoll
+		err = st.SaveState(userID, pollID, state)
+		if err != nil {
+			return err
+		}
+
+		_, err = sendAdvancedEditMessage(bot, int64(userID), p)
+		if err != nil {
+			return fmt.Errorf("could not send advanced edit message: %v", err)
+		}
+		pollsToUpdate.enqueue(pollID)
+		return nil
+	}
+
+	if state == waitingForOpenAt {
+		p, err := st.GetUserPoll(pollID, userID)
+		if err != nil {
+			return fmt.Errorf("could not get poll: %v", err)
+		}
+
+		openAt := calcNextServiceTime(time.Now().Unix(), update.Message.Text)
+		if openAt == 0 {
+			msg := tg.NewMessage(int64(userID), locInvalidDateTime)
+			_, err = bot.Send(&msg)
+			if err != nil {
+				return fmt.Errorf("could not send message: %v", err)
+			}
+			return nil
+		}
+
+		p.OpenEvery = update.Message.Text
+		p.OpenAt = openAt
+		_, err = st.SavePoll(p)
+		if err != nil {
+			return fmt.Errorf("could not save poll: %v", err)
+		}
+
+		msg := tg.NewMessage(int64(userID), fmt.Sprintf(locOpenAtSet, time.Unix(openAt, 0).Format(dateTimeFormat)))
+		_, err = bot.Send(&msg)
+		if err != nil {
+			return fmt.Errorf("could not send message: %v", err)
+		}
+
+		state = editPoll
+		err = st.SaveState(userID, pollID, state)
+		if err != nil {
+			return err
+		}
+
+		_, err = sendAdvancedEditMessage(bot, int64(userID), p)
+		if err != nil {
+			return fmt.Errorf("could not send advanced edit message: %v", err)
+		}
+		pollsToUpdate.enqueue(pollID)
+		return nil
+	}
+
+	if state == waitingForResetAt {
+		p, err := st.GetUserPoll(pollID, userID)
+		if err != nil {
+			return fmt.Errorf("could not get poll: %v", err)
+		}
+
+		resetAt := calcNextServiceTime(time.Now().Unix(), update.Message.Text)
+		if resetAt == 0 {
+			msg := tg.NewMessage(int64(userID), locInvalidDateTime)
+			_, err = bot.Send(&msg)
+			if err != nil {
+				return fmt.Errorf("could not send message: %v", err)
+			}
+			return nil
+		}
+
+		p.ResetEvery = update.Message.Text
+		p.ResetAt = resetAt
+		_, err = st.SavePoll(p)
+		if err != nil {
+			return fmt.Errorf("could not save poll: %v", err)
+		}
+
+		msg := tg.NewMessage(int64(userID), fmt.Sprintf(locResetAtSet, time.Unix(resetAt, 0).Format(dateTimeFormat)))
+		_, err = bot.Send(&msg)
+		if err != nil {
+			return fmt.Errorf("could not send message: %v", err)
+		}
+
+		state = editPoll
+		err = st.SaveState(userID, pollID, state)
+		if err != nil {
+			return err
+		}
+
+		_, err = sendAdvancedEditMessage(bot, int64(userID), p)
+		if err != nil {
+			return fmt.Errorf("could not send advanced edit message: %v", err)
+		}
+		pollsToUpdate.enqueue(pollID)
 		return nil
 	}
 

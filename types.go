@@ -26,6 +26,12 @@ type poll struct {
 	Inactive       int
 	Type           int
 	DisplayPercent int
+	CloseAt        int64
+	CloseEvery     string
+	ResetAt        int64
+	ResetEvery     string
+	OpenAt         int64
+	OpenEvery      string
 	Options        []option
 	Answers        []answer
 }

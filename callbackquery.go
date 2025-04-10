@@ -236,8 +236,7 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 			sendToastMessage(bot, update, locErrUpdatingPollMessage)
 			return fmt.Errorf("could not get poll: %v", err)
 		}
-		state := waitingForOption
-		err = st.SaveState(userID, pollID, state)
+		err = st.SaveState(userID, pollID, waitingForOption)
 		if err != nil {
 			return err
 		}
@@ -248,8 +247,7 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 		}
 		return nil
 	case qryEditQuestion:
-		state := editQuestion
-		err = st.SaveState(userID, pollID, state)
+		err = st.SaveState(userID, pollID, editQuestion)
 		if err != nil {
 			sendToastMessage(bot, update, locErrUpdatingPollMessage)
 			return err
@@ -261,6 +259,108 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 			return fmt.Errorf("could not send message: %v", err)
 		}
 		return nil
+	case qryReturnToPoll:
+		p, err = st.GetUserPoll(pollID, userID)
+		if err != nil {
+			sendToastMessage(bot, update, locErrUpdatingPollMessage)
+			return fmt.Errorf("could not get poll: %v", err)
+		}
+		err = st.SaveState(userID, pollID, editPoll)
+		if err != nil {
+			return err
+		}
+	case qryAdvancedOpts:
+		p, err = st.GetUserPoll(pollID, userID)
+		if err != nil {
+			sendToastMessage(bot, update, locErrUpdatingPollMessage)
+			return fmt.Errorf("could not get poll: %v", err)
+		}
+		err = st.SaveState(userID, pollID, editAdvancedOptions)
+		if err != nil {
+			return err
+		}
+		return sendReplyMarkup(bot, p, update, buildAdvancedEditMarkup(p))
+	case qrySetCloseAt:
+		err = st.SaveState(userID, pollID, waitingForCloseAt)
+		if err != nil {
+			return err
+		}
+
+		msg := tg.NewMessage(update.CallbackQuery.Message.Chat.ID, locSetCloseAtMessage)
+		_, err = bot.Send(&msg)
+		if err != nil {
+			return fmt.Errorf("could not send message: %v", err)
+		}
+		return nil
+	case qryClearCloseAt:
+		p, err = st.GetUserPoll(pollID, userID)
+		if err != nil {
+			sendToastMessage(bot, update, locErrUpdatingPollMessage)
+			return fmt.Errorf("could not get poll: %v", err)
+		}
+		p.CloseAt = 0
+		p.CloseEvery = ""
+		_, err = st.SavePoll(p)
+		if err != nil {
+			sendToastMessage(bot, update, locErrUpdatingPollMessage)
+			return fmt.Errorf("could not save poll: %v", err)
+		}
+		sendToastMessage(bot, update, locClearedAutoClose)
+		return sendReplyMarkup(bot, p, update, buildAdvancedEditMarkup(p))
+	case qrySetOpenAt:
+		err = st.SaveState(userID, pollID, waitingForOpenAt)
+		if err != nil {
+			return err
+		}
+
+		msg := tg.NewMessage(update.CallbackQuery.Message.Chat.ID, locSetOpenAtMessage)
+		_, err = bot.Send(&msg)
+		if err != nil {
+			return fmt.Errorf("could not send message: %v", err)
+		}
+		return nil
+	case qryClearOpenAt:
+		p, err = st.GetUserPoll(pollID, userID)
+		if err != nil {
+			sendToastMessage(bot, update, locErrUpdatingPollMessage)
+			return fmt.Errorf("could not get poll: %v", err)
+		}
+		p.OpenAt = 0
+		p.OpenEvery = ""
+		_, err = st.SavePoll(p)
+		if err != nil {
+			sendToastMessage(bot, update, locErrUpdatingPollMessage)
+			return fmt.Errorf("could not save poll: %v", err)
+		}
+		sendToastMessage(bot, update, locClearedAutoOpen)
+		return sendReplyMarkup(bot, p, update, buildAdvancedEditMarkup(p))
+	case qrySetResetAt:
+		err = st.SaveState(userID, pollID, waitingForResetAt)
+		if err != nil {
+			return err
+		}
+
+		msg := tg.NewMessage(update.CallbackQuery.Message.Chat.ID, locSetResetAtMessage)
+		_, err = bot.Send(&msg)
+		if err != nil {
+			return fmt.Errorf("could not send message: %v", err)
+		}
+		return nil
+	case qryClearResetAt:
+		p, err = st.GetUserPoll(pollID, userID)
+		if err != nil {
+			sendToastMessage(bot, update, locErrUpdatingPollMessage)
+			return fmt.Errorf("could not get poll: %v", err)
+		}
+		p.ResetAt = 0
+		p.ResetEvery = ""
+		_, err = st.SavePoll(p)
+		if err != nil {
+			sendToastMessage(bot, update, locErrUpdatingPollMessage)
+			return fmt.Errorf("could not save poll: %v", err)
+		}
+		sendToastMessage(bot, update, locClearedAutoReset)
+		return sendReplyMarkup(bot, p, update, buildAdvancedEditMarkup(p))
 	case qryResetPoll:
 		err = st.ResetPoll(userID, pollID)
 		if err != nil {
@@ -359,18 +459,19 @@ func handlePollEditQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 		}
 	}
 
-	messageTxt := getSelectedPollHeader(p)
-	messageTxt += getFormattedPreviewPoll(p)
+	return sendReplyMarkup(bot, p, update, buildEditMarkup(p, noOlder, noNewer))
+}
 
-	var ed tg.EditMessageTextConfig
-	ed.Text = messageTxt
-	ed.ParseMode = tg.ModeHTML
-	ed.ReplyMarkup = buildEditMarkup(p, noOlder, noNewer)
-
+func sendReplyMarkup(bot *tg.BotAPI, p *poll, update tg.Update, markup *tg.InlineKeyboardMarkup) error {
+	ed := tg.EditMessageTextConfig{
+		Text:      getSelectedPollMessageText(p),
+		ParseMode: tg.ModeHTML,
+	}
+	ed.ReplyMarkup = markup
 	ed.ChatID = update.CallbackQuery.Message.Chat.ID
 	ed.MessageID = update.CallbackQuery.Message.MessageID
 
-	_, err = bot.Send(ed)
+	_, err := bot.Send(ed)
 	if err != nil {
 		klog.Infof("could not update message: %v\n", err)
 	}

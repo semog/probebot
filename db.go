@@ -77,12 +77,12 @@ func (st *sqlStore) GetUserPoll(pollID int, userID int64) (*poll, error) {
 	var row *sql.Row
 
 	if userID > 0 {
-		row = st.db.QueryRow("SELECT UserID, Question, Inactive, Type, DisplayPercent FROM poll WHERE ID = ? AND UserID = ?", pollID, userID)
+		row = st.db.QueryRow("SELECT UserID, Question, Inactive, Type, DisplayPercent, CloseAt, CloseEvery, ResetAt, ResetEvery, OpenAt, OpenEvery FROM poll WHERE ID = ? AND UserID = ?", pollID, userID)
 	} else {
-		row = st.db.QueryRow("SELECT UserID, Question, Inactive, Type, DisplayPercent FROM poll WHERE ID = ?", pollID)
+		row = st.db.QueryRow("SELECT UserID, Question, Inactive, Type, DisplayPercent, CloseAt, CloseEvery, ResetAt, ResetEvery, OpenAt, OpenEvery FROM poll WHERE ID = ?", pollID)
 	}
 
-	if err := row.Scan(&p.UserID, &p.Question, &p.Inactive, &p.Type, &p.DisplayPercent); err != nil {
+	if err := row.Scan(&p.UserID, &p.Question, &p.Inactive, &p.Type, &p.DisplayPercent, &p.CloseAt, &p.CloseEvery, &p.ResetAt, &p.ResetEvery, &p.OpenAt, &p.OpenEvery); err != nil {
 		return p, fmt.Errorf("could not scan poll #%d: %v", p.ID, err)
 	}
 
@@ -102,8 +102,8 @@ func (st *sqlStore) GetUserPoll(pollID int, userID int64) (*poll, error) {
 func (st *sqlStore) GetPollNewer(pollID int, userID int64) (*poll, error) {
 	p := &poll{}
 	var err error
-	row := st.db.QueryRow("SELECT UserID, ID, Question, Inactive, Type, DisplayPercent FROM poll WHERE ID > ? AND UserID = ? ORDER BY ID ASC LIMIT 1", pollID, userID)
-	if err := row.Scan(&p.UserID, &p.ID, &p.Question, &p.Inactive, &p.Type, &p.DisplayPercent); err != nil {
+	row := st.db.QueryRow("SELECT UserID, ID, Question, Inactive, Type, DisplayPercent, CloseAt, CloseEvery, ResetAt, ResetEvery, OpenAt, OpenEvery FROM poll WHERE ID > ? AND UserID = ? ORDER BY ID ASC LIMIT 1", pollID, userID)
+	if err := row.Scan(&p.UserID, &p.ID, &p.Question, &p.Inactive, &p.Type, &p.DisplayPercent, &p.CloseAt, &p.CloseEvery, &p.ResetAt, &p.ResetEvery, &p.OpenAt, &p.OpenEvery); err != nil {
 		return p, fmt.Errorf("could not scan poll #%d: %v", p.ID, err)
 	}
 
@@ -123,8 +123,8 @@ func (st *sqlStore) GetPollNewer(pollID int, userID int64) (*poll, error) {
 func (st *sqlStore) GetPollOlder(pollID int, userID int64) (*poll, error) {
 	p := &poll{}
 	var err error
-	row := st.db.QueryRow("SELECT UserID, ID, Question, Inactive, Type, DisplayPercent FROM poll WHERE ID < ? AND UserID = ? ORDER BY ID DESC LIMIT 1", pollID, userID)
-	if err := row.Scan(&p.UserID, &p.ID, &p.Question, &p.Inactive, &p.Type, &p.DisplayPercent); err != nil {
+	row := st.db.QueryRow("SELECT UserID, ID, Question, Inactive, Type, DisplayPercent, CloseAt, CloseEvery, ResetAt, ResetEvery, OpenAt, OpenEvery FROM poll WHERE ID < ? AND UserID = ? ORDER BY ID DESC LIMIT 1", pollID, userID)
+	if err := row.Scan(&p.UserID, &p.ID, &p.Question, &p.Inactive, &p.Type, &p.DisplayPercent, &p.CloseAt, &p.CloseEvery, &p.ResetAt, &p.ResetEvery, &p.OpenAt, &p.OpenEvery); err != nil {
 		return p, fmt.Errorf("could not scan poll #%d: %v", p.ID, err)
 	}
 
@@ -172,14 +172,14 @@ func (st *sqlStore) SaveState(userID int64, pollID int, state int) (err error) {
 func (st *sqlStore) GetPollsByUser(userID int64) ([]*poll, error) {
 	polls := make([]*poll, 0)
 	var err error
-	row, err := st.db.Query("SELECT ID, UserID, Question, Inactive, Type, DisplayPercent FROM poll WHERE UserID = ? ORDER BY ID DESC LIMIT 3", userID)
+	row, err := st.db.Query("SELECT ID, UserID, Question, Inactive, Type, DisplayPercent, CloseAt, CloseEvery, ResetAt, ResetEvery, OpenAt, OpenEvery FROM poll WHERE UserID = ? ORDER BY ID DESC LIMIT 3", userID)
 	if err != nil {
 		return polls, fmt.Errorf("could not query polls for userID #%d: %v", userID, err)
 	}
 
 	for row.Next() {
 		p := &poll{UserID: userID}
-		if err := row.Scan(&p.ID, &p.UserID, &p.Question, &p.Inactive, &p.Type, &p.DisplayPercent); err != nil {
+		if err := row.Scan(&p.ID, &p.UserID, &p.Question, &p.Inactive, &p.Type, &p.DisplayPercent, &p.CloseAt, &p.CloseEvery, &p.ResetAt, &p.ResetEvery, &p.OpenAt, &p.OpenEvery); err != nil {
 			return polls, fmt.Errorf("could not scan poll for userID #%d: %v", userID, err)
 		}
 		p.Options, err = st.GetOptions(p.ID)
@@ -562,12 +562,12 @@ func (st *sqlStore) SavePoll(p *poll) (id int, err error) {
 	now := getTimeStamp()
 	if p.ID != 0 {
 		var stmt *sql.Stmt
-		stmt, err = tx.Prepare("UPDATE poll SET UserID = ?, Question = ?, Inactive = ?, Type = ?, DisplayPercent = ?, LastSaved = ?, CreatedAt = ? WHERE ID = ?")
+		stmt, err = tx.Prepare("UPDATE poll SET UserID = ?, Question = ?, Inactive = ?, Type = ?, DisplayPercent = ?, CloseAt = ?, CloseEvery = ?, ResetAt = ?, ResetEvery = ?, OpenAt = ?, OpenEvery = ?, LastSaved = ?, CreatedAt = ? WHERE ID = ?")
 		if err != nil {
 			return id, fmt.Errorf("could not prepare sql statement: %v", err)
 		}
 		defer close(stmt)
-		_, err = stmt.Exec(p.UserID, p.Question, p.Inactive, p.Type, p.DisplayPercent, now, now, p.ID)
+		_, err = stmt.Exec(p.UserID, p.Question, p.Inactive, p.Type, p.DisplayPercent, p.CloseAt, p.CloseEvery, p.ResetAt, p.ResetEvery, p.OpenAt, p.OpenEvery, now, now, p.ID)
 		if err != nil {
 			return id, fmt.Errorf("could not update user entry: %v", err)
 		}
@@ -580,13 +580,13 @@ func (st *sqlStore) SavePoll(p *poll) (id int, err error) {
 	}
 	id = int(id64)
 
-	stmt, err := tx.Prepare("INSERT INTO poll(ID, UserID, Question, Inactive, Type, DisplayPercent, LastSaved, CreatedAt) values(?, ?, ?, ?, ?, ?, ?, ?)")
+	stmt, err := tx.Prepare("INSERT INTO poll(ID, UserID, Question, Inactive, Type, DisplayPercent, CloseAt, CloseEvery, ResetAt, ResetEvery, OpenAt, OpenEvery, LastSaved, CreatedAt) values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		return id, fmt.Errorf("could not prepare sql insert statement: %v", err)
 	}
 	defer close(stmt)
 
-	_, err = stmt.Exec(id, p.UserID, p.Question, p.Inactive, p.Type, p.DisplayPercent, now, now)
+	_, err = stmt.Exec(id, p.UserID, p.Question, p.Inactive, p.Type, p.DisplayPercent, p.CloseAt, p.CloseEvery, p.ResetAt, p.ResetEvery, p.OpenAt, p.OpenEvery, now, now)
 	if err != nil {
 		return id, fmt.Errorf("could not execute sql insert statement: %v", err)
 	}
@@ -699,4 +699,46 @@ func (st *sqlStore) DeletePoll(userID int64, pollID int) error {
 	}
 
 	return nil
+}
+
+func (st *sqlStore) GetPollsWithCloseAtBefore(timestamp int64) ([]*poll, error) {
+	var err error
+	rows, err := st.db.Query("SELECT ID, UserID, Question, Inactive, Type, DisplayPercent, CloseAt, CloseEvery, ResetAt, ResetEvery, OpenAt, OpenEvery FROM poll WHERE CloseAt > 0 AND CloseAt <= ?", timestamp)
+	if err != nil {
+		return nil, fmt.Errorf("could not query polls with close at: %v", err)
+	}
+	defer close(rows)
+	return scanPollRows(rows)
+}
+
+func (st *sqlStore) GetPollsWithResetAtBefore(timestamp int64) ([]*poll, error) {
+	var err error
+	rows, err := st.db.Query("SELECT ID, UserID, Question, Inactive, Type, DisplayPercent, CloseAt, CloseEvery, ResetAt, ResetEvery, OpenAt, OpenEvery FROM poll WHERE ResetAt > 0 AND ResetAt <= ?", timestamp)
+	if err != nil {
+		return nil, fmt.Errorf("could not query polls with close at: %v", err)
+	}
+	defer close(rows)
+	return scanPollRows(rows)
+}
+
+func (st *sqlStore) GetPollsWithOpenAtBefore(timestamp int64) ([]*poll, error) {
+	var err error
+	rows, err := st.db.Query("SELECT ID, UserID, Question, Inactive, Type, DisplayPercent, CloseAt, CloseEvery, ResetAt, ResetEvery, OpenAt, OpenEvery FROM poll WHERE OpenAt > 0 AND OpenAt <= ?", timestamp)
+	if err != nil {
+		return nil, fmt.Errorf("could not query polls with close at: %v", err)
+	}
+	defer close(rows)
+	return scanPollRows(rows)
+}
+
+func scanPollRows(rows *sql.Rows) ([]*poll, error) {
+	polls := make([]*poll, 0)
+	for rows.Next() {
+		p := &poll{}
+		if err := rows.Scan(&p.ID, &p.UserID, &p.Question, &p.Inactive, &p.Type, &p.DisplayPercent, &p.CloseAt, &p.CloseEvery, &p.ResetAt, &p.ResetEvery, &p.OpenAt, &p.OpenEvery); err != nil {
+			return polls, fmt.Errorf("could not scan poll: %v", err)
+		}
+		polls = append(polls, p)
+	}
+	return polls, nil
 }

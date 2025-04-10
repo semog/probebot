@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"html"
+	"strings"
+	"time"
 
 	"github.com/kyokomi/emoji"
 	tg "github.com/semog/go-bot-api/v5"
@@ -76,33 +78,73 @@ func sendNewQuestionMessage(bot *tg.BotAPI, update tg.Update, st Store) error {
 }
 
 func sendEditMessage(bot *tg.BotAPI, chatID int64, p *poll) (tg.Message, error) {
-	messageTxt := getSelectedPollHeader(p)
-	messageTxt += getFormattedPreviewPoll(p)
+	messageTxt := getSelectedPollMessageText(p)
 	msg := tg.NewMessage(chatID, messageTxt)
 	msg.ParseMode = tg.ModeHTML
 	msg.ReplyMarkup = buildEditMarkup(p, false, false)
 	return bot.Send(&msg)
 }
 
+func sendAdvancedEditMessage(bot *tg.BotAPI, chatID int64, p *poll) (tg.Message, error) {
+	messageTxt := getSelectedPollMessageText(p)
+	msg := tg.NewMessage(chatID, messageTxt)
+	msg.ParseMode = tg.ModeHTML
+	msg.ReplyMarkup = buildAdvancedEditMarkup(p)
+	return bot.Send(&msg)
+}
+
+func getSelectedPollMessageText(p *poll) string {
+	return getSelectedPollHeader(p) + getFormattedPreviewPoll(p) + getSelectedPollFooter(p)
+}
+
 func getSelectedPollHeader(p *poll) string {
 	var pollType string
 
 	if p.isRankedVoting() {
-		pollType = "ranked voting"
+		pollType = locRankedVoting
 	} else if p.isMultipleChoice() {
-		pollType = "multiple choice"
+		pollType = locMultipleChoice
 	} else {
-		pollType = "single choice"
+		pollType = locSingleChoice
 	}
 	return fmt.Sprintf(locCurrentlySelectedPoll, pollType)
 }
 func getFormattedPreviewPoll(p *poll) string {
-	body := fmt.Sprintf("<pre>\n%s\n%s\n", p.Question, lineSep)
+	body := fmt.Sprintf("<pre>%s\n%s\n", p.Question, lineSep)
 	for i, o := range p.Options {
 		body += fmt.Sprintf("%d. %s", i+1, o.Text) + "\n"
 	}
-	body += "</pre>\n\n"
+	body += "</pre>"
 	return body
+}
+func getSelectedPollFooter(p *poll) string {
+	var parts []string
+
+	if p.CloseAt > 0 {
+		closesStr := fmt.Sprintf("@ %s", time.Unix(p.CloseAt, 0).Format(dateTimeFormat))
+		if len(p.CloseEvery) > 0 {
+			closesStr += fmt.Sprintf(" (%s)", p.CloseEvery)
+		}
+		parts = append(parts, fmt.Sprintf(locClosesAt, closesStr))
+	}
+
+	if p.OpenAt > 0 {
+		opensStr := fmt.Sprintf("@ %s", time.Unix(p.OpenAt, 0).Format(dateTimeFormat))
+		if len(p.OpenEvery) > 0 {
+			opensStr += fmt.Sprintf(" (%s)", p.OpenEvery)
+		}
+		parts = append(parts, fmt.Sprintf(locOpensAt, opensStr))
+	}
+
+	if p.ResetAt > 0 {
+		resetsStr := fmt.Sprintf("@ %s", time.Unix(p.ResetAt, 0).Format(dateTimeFormat))
+		if len(p.ResetEvery) > 0 {
+			resetsStr += fmt.Sprintf(" (%s)", p.ResetEvery)
+		}
+		parts = append(parts, fmt.Sprintf(locResetsAt, resetsStr))
+	}
+
+	return strings.Join(parts, "\n")
 }
 
 func buildPollMarkup(p *poll) *tg.InlineKeyboardMarkup {
@@ -206,13 +248,13 @@ func buildEditMarkup(p *poll, noOlder, noNewer bool) *tg.InlineKeyboardMarkup {
 	buttonrows = append(buttonrows, make([]tg.InlineKeyboardButton, 0))
 	buttonrows = append(buttonrows, make([]tg.InlineKeyboardButton, 0))
 
-	buttonLast := tg.NewInlineKeyboardButtonData("\u2B05", p.fmtQuery(qryPrevPoll))
-	buttonNext := tg.NewInlineKeyboardButtonData("\u27A1", p.fmtQuery(qryNextPoll))
+	buttonLast := tg.NewInlineKeyboardButtonData("\u2B05 prev", p.fmtQuery(qryPrevPoll))
+	buttonNext := tg.NewInlineKeyboardButtonData("next \u27A1", p.fmtQuery(qryNextPoll))
 	if noOlder {
 		buttonLast = tg.NewInlineKeyboardButtonData(emoji.Sprint(":checkered_flag: (EOL)"), qryDummy)
 	}
 	if noNewer {
-		buttonNext = tg.NewInlineKeyboardButtonData(emoji.Sprint(":checkered_flag: (EOL)"), qryDummy)
+		buttonNext = tg.NewInlineKeyboardButtonData(emoji.Sprint("(EOL) :checkered_flag:"), qryDummy)
 	}
 	buttonrows[0] = append(buttonrows[0], buttonLast, buttonNext)
 
@@ -239,11 +281,15 @@ func buildEditMarkup(p *poll, noOlder, noNewer bool) *tg.InlineKeyboardMarkup {
 		buttonInactiveText = locToggleInactive
 	}
 	buttonInactive := tg.NewInlineKeyboardButtonData(buttonInactiveText, p.fmtQuery(qryToggleActive))
-	buttonDelete := tg.NewInlineKeyboardButtonData(locDeletePollButton, p.fmtQuery(qryDeletePoll))
-	buttonrows[3] = append(buttonrows[3], buttonInactive, buttonDelete)
+	buttonrows[3] = append(buttonrows[3], buttonInactive)
+	if inactive == p.Inactive {
+		buttonDelete := tg.NewInlineKeyboardButtonData(locDeletePollButton, p.fmtQuery(qryDeletePoll))
+		buttonrows[3] = append(buttonrows[3], buttonDelete)
+	}
 
 	buttonResetPoll := tg.NewInlineKeyboardButtonData(locResetPollButton, p.fmtQuery(qryResetPoll))
-	buttonrows[4] = append(buttonrows[4], buttonResetPoll)
+	buttonAdvancedOpts := tg.NewInlineKeyboardButtonData(locAdvancedOptions, p.fmtQuery(qryAdvancedOpts))
+	buttonrows[4] = append(buttonrows[4], buttonResetPoll, buttonAdvancedOpts)
 
 	buttonShare := tg.InlineKeyboardButton{
 		Text:              locSharePoll,
@@ -251,6 +297,41 @@ func buildEditMarkup(p *poll, noOlder, noNewer bool) *tg.InlineKeyboardMarkup {
 	}
 	buttonNew := tg.NewInlineKeyboardButtonData(locCreateNewPoll, qryCreatePoll)
 	buttonrows[5] = append(buttonrows[5], buttonShare, buttonNew)
+
+	markup := tg.NewInlineKeyboardMarkup(buttonrows...)
+	return &markup
+}
+
+func buildAdvancedEditMarkup(p *poll) *tg.InlineKeyboardMarkup {
+	buttonrows := make([][]tg.InlineKeyboardButton, 0)
+	buttonrows = append(buttonrows, make([]tg.InlineKeyboardButton, 0))
+	buttonrows = append(buttonrows, make([]tg.InlineKeyboardButton, 0))
+	buttonrows = append(buttonrows, make([]tg.InlineKeyboardButton, 0))
+	buttonrows = append(buttonrows, make([]tg.InlineKeyboardButton, 0))
+
+	buttonSetAutoClose := tg.NewInlineKeyboardButtonData(locButtonSetAutoClose, p.fmtQuery(qrySetCloseAt))
+	buttonrows[0] = append(buttonrows[0], buttonSetAutoClose)
+	if p.CloseAt > 0 {
+		buttonClearAutoClose := tg.NewInlineKeyboardButtonData(locButtonClearAutoClose, p.fmtQuery(qryClearCloseAt))
+		buttonrows[0] = append(buttonrows[0], buttonClearAutoClose)
+	}
+
+	buttonSetAutoOpen := tg.NewInlineKeyboardButtonData(locButtonSetAutoOpen, p.fmtQuery(qrySetOpenAt))
+	buttonrows[1] = append(buttonrows[1], buttonSetAutoOpen)
+	if p.OpenAt > 0 {
+		buttonClearAutoOpen := tg.NewInlineKeyboardButtonData(locButtonClearAutoOpen, p.fmtQuery(qryClearOpenAt))
+		buttonrows[1] = append(buttonrows[1], buttonClearAutoOpen)
+	}
+
+	buttonSetAutoReset := tg.NewInlineKeyboardButtonData(locButtonSetAutoReset, p.fmtQuery(qrySetResetAt))
+	buttonrows[2] = append(buttonrows[2], buttonSetAutoReset)
+	if p.ResetAt > 0 {
+		buttonClearAutoReset := tg.NewInlineKeyboardButtonData(locButtonClearAutoReset, p.fmtQuery(qryClearResetAt))
+		buttonrows[2] = append(buttonrows[2], buttonClearAutoReset)
+	}
+
+	buttonReturn := tg.NewInlineKeyboardButtonData("\u21A9 back to main", p.fmtQuery(qryReturnToPoll))
+	buttonrows[3] = append(buttonrows[3], buttonReturn)
 
 	markup := tg.NewInlineKeyboardMarkup(buttonrows...)
 	return &markup
