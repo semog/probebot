@@ -1,12 +1,12 @@
 [Unit]
 Description=Run the ProbeBot Telegram Bot
-After=network.target
+After=syslog.target network.target
 StartLimitIntervalSec=60
 StartLimitBurst=7
 
 [Service]
 ExecStart=/usr/local/lib/probebot/probebotsrv.sh
-Restart=on-failure
+Restart=always
 RestartSec=5s
 
 [Install]
