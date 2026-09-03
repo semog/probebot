@@ -19,6 +19,10 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 		return err
 	}
 
+	fromUser := update.Message.From
+	firstName := useDef(&fromUser.FirstName, "unknown")
+	lastName := useDef(&fromUser.LastName, "unknown")
+	userName := useDef(&fromUser.UserName, "unknown")
 	if strings.Contains(update.Message.Text, locAboutCommand) {
 		msg := tg.NewMessage(userID, locAboutMessage)
 		_, err = bot.Send(&msg)
@@ -32,7 +36,7 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 	if err != nil {
 		// could not retrieve state -> state is zero
 		state = ohHi
-		klog.Infof("Starting new dialog with user %s\n", update.Message.From.UserName)
+		klog.Infof("Starting new dialog with user %s %s (%s)\n", firstName, lastName, userName)
 	}
 
 	if strings.Contains(update.Message.Text, locEditCommand) {

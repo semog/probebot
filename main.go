@@ -111,7 +111,6 @@ func run(bot *tg.BotAPI) error {
 		case <-reloadTimer.C:
 			os.Exit(69)
 		case updatePollID := <-pollsToUpdateConstRate:
-			klog.Infof("Updating poll #%d\n", updatePollID)
 			err := updatePollMessages(bot, updatePollID, st)
 			if err != nil {
 				klog.Infof("Could not update poll #%d: %v", updatePollID, err)

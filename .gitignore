@@ -4,6 +4,7 @@
 *.so
 
 # Folders
+.zed
 _obj
 _test
 

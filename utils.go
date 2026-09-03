@@ -9,6 +9,14 @@ import (
 	"time"
 )
 
+// Use the specified value, or if it is nil, then use the default value.
+func useDef[T any](p *T, def T) T {
+	if p != nil {
+		return *p
+	}
+	return def
+}
+
 func getTimeStamp() int64 {
 	return time.Now().UTC().UnixNano()
 }

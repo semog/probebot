@@ -173,7 +173,7 @@ func (st *sqlStore) GetPollsByUser(userID int64) ([]*poll, error) {
 	polls := make([]*poll, 0)
 	var err error
 	row, err := st.db.Query("SELECT ID, UserID, Question, Inactive, Type, DisplayPercent, CloseAt, CloseEvery, ResetAt, ResetEvery, OpenAt, OpenEvery FROM poll WHERE UserID = ? ORDER BY ID DESC LIMIT 3", userID)
-	if err != nil {
+	if err != nil || row.Err() != nil {
 		return polls, fmt.Errorf("could not query polls for userID #%d: %v", userID, err)
 	}
 
