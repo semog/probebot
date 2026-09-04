@@ -76,18 +76,14 @@ func handleCallbackQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 
 	pollsToUpdate.enqueue(p.ID)
 
-	fromUser := update.CallbackQuery.From
-	firstName := useDef(&fromUser.FirstName, "unknown")
-	lastName := useDef(&fromUser.LastName, "unknown")
-	userName := useDef(&fromUser.UserName, "unknown")
-
+	fromUserName := getLogUserName(update.CallbackQuery.From)
 	var popupText string
 	if unvoted {
 		popupText = locSelectionRemoved
-		klog.Infof("UNSELECT [%d] (%s) %s - %s %s (%s)\n", p.ID, p.Question, choice.Text, firstName, lastName, userName)
+		klog.Infof("UNSELECT [%d] (%s) %s - %s\n", p.ID, p.Question, choice.Text, fromUserName)
 	} else {
 		popupText = fmt.Sprintf(locYouSelected, choice.Text)
-		klog.Infof("SELECT [%d] (%s) %s - %s %s (%s)\n", p.ID, p.Question, choice.Text, firstName, lastName, userName)
+		klog.Infof("SELECT [%d] (%s) %s - %s\n", p.ID, p.Question, choice.Text, fromUserName)
 	}
 
 	return sendToastMessage(bot, update, popupText)

@@ -84,16 +84,20 @@ var dbPatchFuncs = []sqldb.PatchFuncType{
 	}},
 	{PatchID: 4, PatchFunc: func(sdb *sqldb.SQLDb) error {
 		// Clean up the database. Invalid UserID of 0 was allowed to be inserted.
-		if err := sdb.Exec("DELETE FROM answer WHERE UserID = 0"); err != nil {
+		if err := sdb.Exec("DELETE FROM answer " +
+			"WHERE UserID = 0"); err != nil {
 			return err
 		}
-		if err := sdb.Exec("DELETE FROM poll WHERE UserID = 0"); err != nil {
+		if err := sdb.Exec("DELETE FROM poll " +
+			"WHERE UserID = 0"); err != nil {
 			return err
 		}
-		if err := sdb.Exec("DELETE FROM dialog WHERE UserID = 0"); err != nil {
+		if err := sdb.Exec("DELETE FROM dialog " +
+			"WHERE UserID = 0"); err != nil {
 			return err
 		}
-		if err := sdb.Exec("DELETE FROM user WHERE ID = 0"); err != nil {
+		if err := sdb.Exec("DELETE FROM user " +
+			"WHERE ID = 0"); err != nil {
 			return err
 		}
 		// Remove dead code table

@@ -126,7 +126,8 @@ func run(bot *tg.BotAPI) error {
 
 			// INLINE QUERIES
 			if update.InlineQuery != nil {
-				klog.Infof("InlineQuery from [%s]: %s", update.InlineQuery.From.UserName, update.InlineQuery.Query)
+				fromUserName := getLogUserName(update.InlineQuery.From)
+				klog.Infof("InlineQuery from %s: %s", fromUserName, update.InlineQuery.Query)
 
 				err := st.SaveUser(update.InlineQuery.From)
 				if err != nil {
@@ -151,7 +152,8 @@ func run(bot *tg.BotAPI) error {
 				if err != nil {
 					return fmt.Errorf("could not add inline message to poll: %v", err)
 				}
-				klog.Infof("Added poll #%d to chat by %s", pollID, update.CallbackQuery.From.UserName)
+				fromUserName := getLogUserName(update.CallbackQuery.From)
+				klog.Infof("Added poll #%d to chat by %s", pollID, fromUserName)
 				continue
 			}
 
@@ -181,7 +183,8 @@ func run(bot *tg.BotAPI) error {
 			}
 
 			// Messages
-			klog.Infof("Message from [%s] %s", update.Message.From.UserName, update.Message.Text)
+			fromUserName := getLogUserName(update.Message.From)
+			klog.Infof("Message from %s %s", fromUserName, update.Message.Text)
 
 			// Conversations
 			err = handleDialog(bot, update, st)

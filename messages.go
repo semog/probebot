@@ -351,3 +351,19 @@ func getDisplayUserName(u *tg.User) string {
 	}
 	return name
 }
+
+func getLogUserName(u *tg.User) string {
+	name := useDef(&u.FirstName, "")
+	lastName := useDef(&u.LastName, "")
+	userName := useDef(&u.UserName, "")
+	if len(lastName) > 0 {
+		name += " " + lastName
+	}
+	if len(userName) > 0 {
+		name += fmt.Sprintf(" (%s)", userName)
+	}
+	if len(name) == 0 {
+		name = "unknown"
+	}
+	return name
+}

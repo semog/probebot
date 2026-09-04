@@ -19,11 +19,9 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 		return err
 	}
 
-	fromUser := update.Message.From
-	firstName := useDef(&fromUser.FirstName, "unknown")
-	lastName := useDef(&fromUser.LastName, "unknown")
-	userName := useDef(&fromUser.UserName, "unknown")
+	fromUserName := getLogUserName(update.Message.From)
 	if strings.Contains(update.Message.Text, locAboutCommand) {
+		klog.Infof("Sending About info to user %s\n", fromUserName)
 		msg := tg.NewMessage(userID, locAboutMessage)
 		_, err = bot.Send(&msg)
 		if err != nil {
@@ -36,13 +34,13 @@ func handleDialog(bot *tg.BotAPI, update tg.Update, st Store) error {
 	if err != nil {
 		// could not retrieve state -> state is zero
 		state = ohHi
-		klog.Infof("Starting new dialog with user %s %s (%s)\n", firstName, lastName, userName)
+		klog.Infof("Starting new dialog with user %s\n", fromUserName)
 	}
 
 	if strings.Contains(update.Message.Text, locEditCommand) {
 		polls, err := st.GetPollsByUser(userID)
 		if err != nil || len(polls) == 0 {
-			klog.Infof("could not get polls of user with userID %d: %v", userID, err)
+			klog.Infof("could not get polls for %s with userID %d: %v", fromUserName, userID, err)
 			state = ohHi
 			err = st.SaveState(userID, pollID, state)
 			if err != nil {
