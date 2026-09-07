@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	tg "github.com/semog/go-bot-api/v5"
-	"k8s.io/klog"
 )
 
 func handleInlineQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
@@ -17,9 +16,8 @@ func handleInlineQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 	if len(polls) > maxPollsInlineQuery {
 		polls = polls[0 : maxPollsInlineQuery-1]
 	}
-	results := make([]interface{}, len(polls))
+	results := make([]any, len(polls))
 	for i, p := range polls {
-		klog.Infoln(p)
 		article := tg.NewInlineQueryResultArticleHTML(strconv.Itoa(p.ID), p.Question, buildPollListing(p, st))
 		if len(p.Options) > 0 {
 			article.ReplyMarkup = buildPollMarkup(p)

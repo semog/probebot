@@ -17,6 +17,11 @@ func useDef[T any](p *T, def T) T {
 	return def
 }
 
+// stripEOL replaces line returns with spaces to create one text line.
+func stripEOL(s string) string {
+	return strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(s, "\r\n", " "), "\n", " "), "\r", " ")
+}
+
 func getTimeStamp() int64 {
 	return time.Now().UTC().UnixNano()
 }

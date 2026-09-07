@@ -127,7 +127,7 @@ func run(bot *tg.BotAPI) error {
 			// INLINE QUERIES
 			if update.InlineQuery != nil {
 				fromUserName := getLogUserName(update.InlineQuery.From)
-				klog.Infof("InlineQuery from %s: %s", fromUserName, update.InlineQuery.Query)
+				klog.Infof("InlineQuery from %s: %s", fromUserName, stripEOL(update.InlineQuery.Query))
 
 				err := st.SaveUser(update.InlineQuery.From)
 				if err != nil {
@@ -184,7 +184,7 @@ func run(bot *tg.BotAPI) error {
 
 			// Messages
 			fromUserName := getLogUserName(update.Message.From)
-			klog.Infof("Message from %s %s", fromUserName, update.Message.Text)
+			klog.Infof("Message from %s %s", fromUserName, stripEOL(update.Message.Text))
 
 			// Conversations
 			err = handleDialog(bot, update, st)

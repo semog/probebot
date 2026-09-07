@@ -80,10 +80,10 @@ func handleCallbackQuery(bot *tg.BotAPI, update tg.Update, st Store) error {
 	var popupText string
 	if unvoted {
 		popupText = locSelectionRemoved
-		klog.Infof("UNSELECT [%d] (%s) %s - %s\n", p.ID, p.Question, choice.Text, fromUserName)
+		klog.Infof("UNSELECT [%d] (%s) %s - %s\n", p.ID, stripEOL(p.Question), stripEOL(choice.Text), fromUserName)
 	} else {
 		popupText = fmt.Sprintf(locYouSelected, choice.Text)
-		klog.Infof("SELECT [%d] (%s) %s - %s\n", p.ID, p.Question, choice.Text, fromUserName)
+		klog.Infof("SELECT [%d] (%s) %s - %s\n", p.ID, stripEOL(p.Question), stripEOL(choice.Text), fromUserName)
 	}
 
 	return sendToastMessage(bot, update, popupText)
